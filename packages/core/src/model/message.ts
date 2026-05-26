@@ -10,7 +10,7 @@ export enum FileState {
 export interface IMessageInfo {
     id?: string;
     conversationId?: string;
-    type: 'card' | 'markdown' | 'text' | 'welcome' | 'ext' | 'file' | 'loading' | unknown;
+    type: 'card' | 'markdown' | 'text' | 'welcome' | 'ext' | 'file' | 'loading' | 'image';
     role?: 'user' | 'system';
     timestamp?: Date | number;
     status?: Number;
