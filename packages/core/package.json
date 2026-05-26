@@ -22,7 +22,10 @@
   ],
   "scripts": {
     "dev": "vite build -w",
-    "build": "vite build"
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "overrides": {},
   "peerDependencies": {
@@ -34,6 +37,9 @@
     "lodash-es": "^4.17.21"
   },
   "devDependencies": {
-    "@types/d3-array": "^3.2.1"
+    "@types/d3-array": "^3.2.1",
+    "@vitest/coverage-v8": "^4.1.7",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.7"
   }
 }
