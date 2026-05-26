@@ -49,7 +49,7 @@ export class ChatStore {
     getLatestMessages = (count: number): Message[] => this.messageListStore.getLatestMessages(count);
     initMessages = (list?: Message[]): void => this.messageListStore.initMessages(list);
     // 配置相关
-    initConfig = <T extends keyof ChatConfig>(config: T): void => this.configStore.initConfig(config);
+    initConfig = (config: ChatConfig): void => this.configStore.initConfig(config);
     getConfig = (): ChatConfig => this.configStore.getConfig();
     updateConfig = <T extends keyof ChatConfig>( key: T, newValue: Partial<ChatConfig[T]> ): void => this.configStore.updateConfig(key, newValue);
     deleteConfig= <T extends keyof ChatConfig>(key: T): void => this.configStore.deleteConfig(key);

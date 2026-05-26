@@ -7,7 +7,7 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm -r run build && changeset publish",
-    "build": "cd ./packages/vue && npm run build"
+    "build": "pnpm -r run build"
   },
   "devDependencies": {
     "husky": "^9.1.7",

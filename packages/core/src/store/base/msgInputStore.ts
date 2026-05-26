@@ -20,7 +20,6 @@ export class MsgInputStore extends EventEmitter {
   setMsgInput(msgInput: MsgInput) {
     this.msgInput = { ...msgInput };
     this.emit(QUERY_ACTION_TYPE.SET, msgInput);
-    console.log('setMsgInputsetMsgInput: 2', this.msgInput);
   }
   initMsgInput() {
     this.msgInput = { ...msgInputDefault };
