@@ -27,7 +27,8 @@ export default defineConfig({
         `${entryName}.${format}.js`,
     },
     rollupOptions: {
-      external: ['lodash-es'],
+      // 运行时依赖外置，避免打进 bundle / 重复打包（消费方经 dependencies 自动安装）。
+      external: ['lodash-es', '@microsoft/fetch-event-source'],
       output: {
         exports: 'named',
       },

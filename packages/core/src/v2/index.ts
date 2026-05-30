@@ -5,3 +5,4 @@
  * v2 以子路径独立导出，consumer 按需引入、互不影响 tree-shaking。
  */
 export * from './core';
+export * from './transport';
