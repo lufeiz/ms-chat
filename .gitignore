@@ -27,3 +27,6 @@ cache
 .vscode
 
 storybook-static
+
+# Claude Code 个人本地配置（共享的 launch.json/settings.json 仍会被跟踪）
+.claude/settings.local.json
