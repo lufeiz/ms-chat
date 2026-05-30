@@ -8,3 +8,4 @@ export * from './core';
 export * from './transport';
 export * from './plugin';
 export * from './store';
+export * from './managers';
