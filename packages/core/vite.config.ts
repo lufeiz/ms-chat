@@ -8,24 +8,29 @@ export default defineConfig({
       '@': '/src/',
     },
   },
+  define: {
+    // DEV 校验层开关；PROD 构建折叠为 false 以便消费方 DCE（RFC §2.1.9）。
+    __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+  },
   build: {
     commonjsOptions: {
       esmExternals: true,
     },
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'ms-chat-core',
+      // 多入口：主入口（v1）+ v2 子路径，使 `@ms-chat/core/v2` 可作为发布产物按需引入。
+      entry: {
+        'ms-chat-core': resolve(__dirname, 'src/index.ts'),
+        v2: resolve(__dirname, 'src/v2/index.ts'),
+      },
       formats: ['es', 'cjs'],
-      fileName: (format: string) => `ms-chat-core.${format}.js`,
+      fileName: (format: string, entryName: string) =>
+        `${entryName}.${format}.js`,
     },
     rollupOptions: {
-      external: [
-        'lodash-es'
-      ],
+      external: ['lodash-es'],
       output: {
-        format: 'esm',
-        exports: 'named'
-      }
+        exports: 'named',
+      },
     },
   },
   plugins: [dts()],

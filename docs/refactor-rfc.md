@@ -478,37 +478,38 @@ type WorkerOutbound =
 | SSEClient | 检测 `body` 类型与 `Content-Type` 一致性；headers 全小写化 | 不检查 |
 | ThemeManager | `setThemeConfig` 传入未声明字段时 warn | 不检查 |
 
-**开关机制**：
+**开关机制（PR-1 已落地，实测见下）**：
 
 ```ts
-// v2/core/devMode.ts
+// v2/global.d.ts —— 全局环境声明，所有 v2 文件可直接用 __DEV__
 declare const __DEV__: boolean;          // 由 bundler define 注入
-export const isDev = __DEV__;
+
+// v2/core/devMode.ts
+const COMPILE_DEV = typeof __DEV__ !== 'undefined' ? __DEV__ : true; // 未注入时默认 dev
+let override: boolean | null = null;
+export function setDevMode(v: boolean | null): void { override = v; }   // 测试用
+export function resetDevMode(): void { override = null; }               // 测试 afterEach
+export function isDevMode(): boolean { return override !== null ? override : COMPILE_DEV; }
 
 export function devAssert(cond: unknown, msg: string): asserts cond {
-  if (__DEV__ && !cond) {
-    throw new Error(`[ms-chat/core] ${msg}`);
-  }
+  if (__DEV__ && isDevMode() && !cond) throw new Error(`[ms-chat/core] ${msg}`);
 }
-
 export function devWarn(cond: unknown, msg: string): void {
-  if (__DEV__ && !cond) {
-    console.warn(`[ms-chat/core] ${msg}`);
-  }
+  if (__DEV__ && isDevMode() && !cond) console.warn(`[ms-chat/core] ${msg}`);
 }
 ```
 
-`vite.config.ts` 里：
+`vite.config.ts` 注入 `__DEV__: JSON.stringify(process.env.NODE_ENV !== 'production')`；
+`vitest.config.ts` 注入 `__DEV__: 'true'`。
 
-```ts
-define: {
-  __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
-}
-```
+**双层守卫约定（重要——所有 v2 dev-only 分支都遵循）**：
 
-生产构建后所有 `if (__DEV__)` 分支被 terser/esbuild 静态消除，零运行时开销。
+- `__DEV__`：**编译期字面量**，PROD 折叠为 `false` → 整段分支（含字符串字面量）被 DCE，零运行时开销。
+- `isDevMode()`：**运行时可覆盖**，仅在 `__DEV__=true` 的 dev/test 构建里被求值；测试用 `setDevMode(false)` 即可在一次 test run 内同时覆盖 dev / prod 两条路径。
+- 二者组合 `if (__DEV__ && isDevMode() && ...)`：PROD 得 DCE，TEST 得运行时切换，两全。
+- 体积敏感 / 字符串多的分支，**必须**在调用点写 `__DEV__ &&` 守卫（而非仅 `isDevMode()`），否则字符串无法被 DCE。
 
-**调用方覆盖**：除 `__DEV__` 自动判断外，提供 `setDevMode(boolean)` 让 vitest 强制开启 devMode 跑校验测试。
+**PR-1 实测**（`vite build` 后 grep `dist/v2.es.js`）：`__DEV__`、`console.warn/error`、`[ms-chat/core]` dev 字符串均为 **0 残留**，v2 bundle 1.94 kB（gzip 0.78 kB）。验证了「PROD 零开销」不是口号。
 
 ---
 

@@ -12,7 +12,13 @@
       "import": "./dist/ms-chat-core.es.js",
       "require": "./dist/ms-chat-core.cjs.js"
     },
+    "./v2": {
+      "types": "./dist/v2/index.d.ts",
+      "import": "./dist/v2.es.js",
+      "require": "./dist/v2.cjs.js"
+    },
     "./src": "./src/index.ts",
+    "./src/v2": "./src/v2/index.ts",
     "./src/utils": "./src/utils",
     "./dist/style.css": "./dist/style.css"
   },
@@ -25,7 +31,8 @@
     "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "overrides": {},
   "peerDependencies": {
