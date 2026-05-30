@@ -326,8 +326,20 @@ class PluginSystem {
   unregisterAll(targetFunction?: string): void;
   /** debug 用 */
   list(targetFunction?: string): PluginRegistration[];
+  /** 执行一次带流水线的调用；before 短路时返回 false。createWrappedFunction 基于此。 */
+  run<TArgs extends any[], TResult>(
+    functionName: string,
+    originalFn: (...args: TArgs) => TResult | Promise<TResult>,
+    args: TArgs,
+    metadata?: Record<string, unknown>,
+  ): Promise<TResult | false>;
 }
 ```
+
+**流水线（PR-3 已落地）**：`before → transform → 原函数 → after`，任一阶段抛错跳到 `error` 并 rethrow。
+- `before` 返回 `false` → 短路，不执行原函数，wrapped 调用 resolve 为 `false`。
+- `transform` 返回 `{ args }` → 替换下游传给原函数的参数；返回 `{ result }` → 用该值短路原函数（跳过 fn，仍走 after）。
+- `register` 返回 disposer；`unregister(id)` / `unregisterAll(fn?)` 支持热卸载（修 H8）。
 
 #### 2.1.5 ChatStore（Proxy 自动委派）
 
@@ -638,7 +650,7 @@ v1 文件头统一加：
 
 #### `PluginSystem.test.ts`
 
-- before/after/error/transform 四种钩子顺序：before → fn → transform → after，错误时跳到 error
+- before/after/error/transform 四种钩子顺序：**before → transform → fn → after**，错误时跳到 error（PR-3 定稿：transform 在 fn 前，用于改写下游 args 或返回 result 短路 fn）
 - priority 高的先执行
 - `unregister(id)` 立即生效
 - `unregisterAll(targetFunction)` 只清该函数的
