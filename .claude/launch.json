@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "react-v2-demo",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "vite.dev.config.ts", "--port", "5191"],
+      "cwd": "packages/react",
+      "port": 5191
+    }
+  ]
+}

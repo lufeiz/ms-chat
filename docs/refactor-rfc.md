@@ -341,19 +341,27 @@ class PluginSystem {
 - `transform` 返回 `{ args }` → 替换下游传给原函数的参数；返回 `{ result }` → 用该值短路原函数（跳过 fn，仍走 after）。
 - `register` 返回 disposer；`unregister(id)` / `unregisterAll(fn?)` 支持热卸载（修 H8）。
 
-#### 2.1.5 ChatStore（Proxy 自动委派）
+#### 2.1.5 ChatStore（组合子 store）
+
+> **PR-5 定稿**：放弃初稿的 Proxy 动态委派（运行时不透明 + mapped-type 展平难维护），
+> 改为**直接把子 store 暴露为只读属性**——组合优于扁平化，完全类型化、零运行时魔法。
 
 ```ts
-class ChatStore {
-  msgInputStore: MsgInputStore;
-  conversationsStore: ConversationsStore;
-  messageListStore: MessageListStore;
-  configStore: ChatConfigManager;
-  // 不再写 45 行 setX = (...) => this.subStore.setX(...)；
-  // 用 Proxy + dispatch table 自动代理已声明的 facade method 集合。
-  // 类型层用 mapped type 静态展平子 store 公开方法。
+class ChatStore<TComp = unknown> {
+  readonly messages: MessageStore;
+  readonly conversations: ConversationStore;
+  readonly msgInput: MsgInputStore;
+  readonly config: ConfigStore;
+  readonly registry: ComponentRegistry<TComp>;   // 实例级，替代全局 registryMessageType
+  constructor(options?: { config?: ChatConfig });
+  destroy(): void;
 }
+
+// 用法：store.messages.add(msg) / store.conversations.setCurrent(id) / store.registry.register(...)
 ```
+
+子 store 全部继承 BaseListStore（或 EventEmitter），自带引用稳定 `getSnapshot()` 与
+`changed` 事件；读操作不再 emit（修 H9），删除未命中不 emit（修 H6）。
 
 #### 2.1.6 ComponentRegistry（实例化，修 E1）
 
