@@ -1,6 +1,11 @@
 
 type EventHandler = (...args: any[]) => void;
 
+/**
+ * @deprecated since 1.0.0 — 使用 `@ms-chat/core/v2` 的 `EventEmitter`。
+ * v2 版本提供错误隔离、可取消的 once、快照式 emit、类型化 EventMap 与监听器泄漏告警。
+ * 本类将在 2.0.0 移除。迁移指南：docs/migration-v1-to-v2.md。
+ */
 export class EventEmitter {
   private events: Map<string, EventHandler[]> = new Map();
 

@@ -17,6 +17,12 @@ interface EventSourceEvents<T = unknown> {
   onClose?: () => void;
 }
 
+/**
+ * @deprecated since 1.0.0 — 使用 `@ms-chat/core/v2` 的 `SSEClient`。
+ * v2 版本支持实例复用（每次 connect 新建 AbortController）、重连退避、
+ * GET/空 body 修正与 strictJSON。本类将在 2.0.0 移除。
+ * 迁移指南：docs/migration-v1-to-v2.md。
+ */
 export class EventSourceService<T = unknown> {
   private abortController: AbortController;
   private isActive: boolean = false;
