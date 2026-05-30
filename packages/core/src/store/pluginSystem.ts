@@ -1,4 +1,10 @@
 import { HookType, HookHandler, PluginContext, PluginRegistration } from '../model';
+
+/**
+ * @deprecated since 1.0.0 — 使用 `@ms-chat/core/v2` 的 `PluginSystem`。
+ * v2 版本新增 transform 钩子、before 短路、unregister/unregisterAll 与 disposer。
+ * 本类将在 2.0.0 移除。迁移指南：docs/migration-v1-to-v2.md。
+ */
 export class PluginSystem {
     private hooks: Map<string, Map<HookType, Array<{
         handler: HookHandler,
@@ -40,6 +46,10 @@ export class PluginSystem {
     // 差个卸载
 }
 
+/**
+ * @deprecated since 1.0.0 — 使用 `@ms-chat/core/v2` 的 `createWrappedFunction`。
+ * 本函数将在 2.0.0 移除。迁移指南：docs/migration-v1-to-v2.md。
+ */
 export function createWrappedFunction<T extends (...args: any[]) => any>(
     originalFn: T,
     functionName: string,
