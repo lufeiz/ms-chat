@@ -25,10 +25,10 @@ import { SSEClient } from '@ms-chat/core/v2';
 |---|---|---|---|
 | `EventEmitter`（event/） | `EventEmitter`（v2/core） | ✅ 可迁移 | #2 |
 | `EventSourceService`（api/） | `SSEClient`（v2/transport） | ✅ 可迁移 | #3 |
-| `PluginSystem` / `createWrappedFunction`（store/） | 同名（v2/plugin） | ✅ 可迁移 | #4 |
-| `ChatStore` / 各子 Store | v2 Store | ⏳ Phase 2 | — |
-| `registryMessageType`（全局） | `ComponentRegistry`（实例） | ⏳ Phase 2 | — |
-| `CardConversationManager` / `CommandToolboxManager` | 继承 BaseStatefulManager | ⏳ Phase 2 | — |
+| `PluginSystem` / `createWrappedFunction`（store/） | 同名（v2/plugin） | ✅ 可迁移 | #6 |
+| `ChatStore` / 各子 Store | v2 Store（组合子 store） | ✅ 可迁移 | #7 |
+| `registryMessageType`（全局） | `ComponentRegistry`（实例） | ✅ 可迁移 | #7 |
+| `CardConversationManager` / `CommandToolboxManager` | 继承 BaseStatefulManager | ✅ 可迁移 | #7 |
 | `ThemeManager` | v2 ThemeManager（继承 EventEmitter） | ⏳ Phase 3 | — |
 
 > 未列「可迁移」的 v1 API **暂不要** deprecate / 迁移——其 v2 版本尚未就绪。
@@ -130,6 +130,50 @@ dispose();                       // 或 ps.unregister(id) / ps.unregisterAll('ad
 - DEV 下 `register()` 校验 hookType 拼写与 handler 类型。
 
 ---
+
+## ChatStore / 状态层
+
+```ts
+// ── v1 ──
+import { ChatStore } from '@ms-chat/core';
+const store = new ChatStore(config);
+store.addMessage(msg);                 // 45 个扁平委派方法
+store.getAllMessages();                // 每次返回新数组
+import { registryMessageType } from '@ms-chat/core';
+registryMessageType('text', TextCard); // ⚠️ 全局，多实例互相污染
+
+// ── v2 ──
+import { ChatStore } from '@ms-chat/core/v2';
+const store = new ChatStore({ config });
+store.messages.add(msg);               // 直接用子 store，全类型化
+store.messages.getSnapshot();          // { version, data }，引用稳定
+store.registry.register('text', TextCard); // 实例级，互不污染（修 E1）
+```
+
+变化点：
+
+- 子 store 暴露为只读属性：`store.messages` / `store.conversations` / `store.msgInput` / `store.config` / `store.registry`。
+- 列表 store 继承 BaseListStore，`getSnapshot()` 引用稳定，订阅 `changed` 事件。
+- `remove` 未命中不再 emit（修 H6）；读操作不 emit（修 H9）。
+- 消息组件注册表从全局 `registryMessageType` 改为 `store.registry`（实例级）。
+
+React 桥接示例见 `packages/react/demo/v2`（`useMessages` 用 `changed` + disposer 清理）。
+
+## Managers（CardConversation / CommandToolbox）
+
+```ts
+// ── v1 ──
+import { CardConversationManager } from '@ms-chat/core';
+// ── v2 ──
+import { CardConversationManager } from '@ms-chat/core/v2';
+```
+
+变化点：
+
+- 两者现继承 `BaseStatefulManager`，定时器统一托管——`destroy()` / `reset()` 不再漏清。
+- `getMessages()` / `getContext()`（Card）、`getState()`（CommandToolbox）引用稳定，去掉 v1 每次调用的浅克隆（修 P2/P5）。
+- `CommandToolboxManager.register()` 返回 disposer。
+- 事件名改为命名空间式（如 `card:add` / `toolbox:filter`），不再用 v1 的 enum 常量。
 
 ## devMode（v2 通用）
 
