@@ -29,9 +29,38 @@ import { SSEClient } from '@ms-chat/core/v2';
 | `ChatStore` / 各子 Store | v2 Store（组合子 store） | ✅ 可迁移 | #7 |
 | `registryMessageType`（全局） | `ComponentRegistry`（实例） | ✅ 可迁移 | #7 |
 | `CardConversationManager` / `CommandToolboxManager` | 继承 BaseStatefulManager | ✅ 可迁移 | #7 |
-| `ThemeManager` | v2 ThemeManager（继承 EventEmitter） | ⏳ Phase 3 | — |
+| `ThemeManager` | v2 ThemeManager（继承 EventEmitter） | ✅ 可迁移 | Phase 3 |
 
 > 未列「可迁移」的 v1 API **暂不要** deprecate / 迁移——其 v2 版本尚未就绪。
+
+---
+
+## ThemeManager
+
+```ts
+// ── v1 ──
+import { ThemeManager } from '@ms-chat/core';
+const tm = new ThemeManager({ conversation: { 'c-s-width': '240px' } });
+tm.setThemeConfig({ conversation: { 'c-s-width': '300px' } });
+// ⚠️ 三层及以上的嵌套改动会静默失效；getThemeConfig 每次 JSON 深克隆
+
+// ── v2 ──
+import { ThemeManager } from '@ms-chat/core/v2';
+const tm = new ThemeManager({ conversation: { 'c-s-width': '240px' } });
+const off = tm.on('theme:change', (theme, changes) => {
+  // changes: [{ path, cssVar, oldValue, newValue }]
+});
+tm.setThemeConfig({ conversation: { 'c-s-width': '300px' } });
+off();
+```
+
+变化点：
+
+- **继承 EventEmitter**：`on('theme:change', (theme, changes) => ...)`，payload 含扁平变更列表；返回 disposer。
+- **深度递归 diff**：任意嵌套层级改动都会落到对应 CSS 变量（修 H10）。
+- **结构化共享 + 引用稳定**：`getThemeConfig()` 返回 frozen 且引用稳定的对象，仅在真正变更后才换新引用（替代 JSON 深克隆，修 P3）；未变更的 `setThemeConfig` 是 no-op。
+- **SSR 守卫**：无 `document` 时跳过 CSS 应用，仍维护状态并 emit。
+- CSS 变量命名 `--mschat--a--b`（2 层与 v1 完全兼容，深层自然延伸）；可用 `cssVarPrefix` 选项改前缀。
 
 ---
 

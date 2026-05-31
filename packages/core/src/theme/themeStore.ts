@@ -1,5 +1,10 @@
 import { ThemeConfig } from '../model';
 
+/**
+ * @deprecated since 2.0 — 使用 `@ms-chat/core/v2` 的 `ThemeManager`。
+ * v2 修复深层主题静默失效（H10），用结构化共享替代 JSON 深克隆，并继承 EventEmitter
+ * 提供 `theme:change` 订阅。迁移见 docs/migration-v1-to-v2.md。将在 3.0 移除。
+ */
 export class ThemeManager {
   private themeConfig: ThemeConfig = {};
 
