@@ -4,14 +4,14 @@
     {
       "name": "react-v2-demo",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--config", "vite.dev.config.ts", "--port", "5191"],
+      "runtimeArgs": ["vite", "demo/v2", "--config", "vite.dev.config.ts", "--port", "5191"],
       "cwd": "packages/react",
       "port": 5191
     },
     {
       "name": "vue-v2-demo",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["vite", "--port", "5192"],
+      "runtimeArgs": ["vite", "demo/v2", "--config", "vite.config.ts", "--port", "5192"],
       "cwd": "packages/vue-next",
       "port": 5192
     }
