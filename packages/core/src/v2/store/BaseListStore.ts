@@ -1,6 +1,7 @@
 import { EventEmitter } from '../core/EventEmitter';
 import { isDevMode } from '../core/devMode';
 import { IS_DEV } from '../core/env';
+import { Scheduler } from '../core/Scheduler';
 
 /** 带版本号的不可变列表视图。订阅方可用引用相等（===）判断是否变化。 */
 export interface Snapshot<T> {
@@ -32,6 +33,20 @@ export abstract class BaseListStore<
   protected list: ReadonlyArray<T> = [];
   private _version = 0;
   private cachedSnapshot: Snapshot<T> | null = null;
+  private scheduler = new Scheduler();
+
+  /**
+   * `changed` 的实际派发函数。用稳定引用（class field）使 Scheduler 能按 fn 去重：
+   * 一个 microtask 内多次 mutate → 只派发一次 changed（携带最终快照）。
+   */
+  private doEmitChanged = (): void => {
+    (
+      this.emit as unknown as (
+        event: 'changed',
+        snapshot: Snapshot<T>,
+      ) => void
+    )('changed', this.getSnapshot());
+  };
 
   /** 当前版本号，每次变更 +1。 */
   get version(): number {
@@ -57,16 +72,24 @@ export abstract class BaseListStore<
     this.cachedSnapshot = null;
   }
 
-  /** 发 `changed` 事件，携带引用稳定的新快照。 */
+  /**
+   * 调度 `changed` 事件（microtask 批处理）。同步突发里多次调用只派发一次（修 P4）。
+   * 细粒度事件（如 `message:add`）由子类同步 emit，不经此路径。
+   * 需要同步通知时调用 `flush()`。
+   */
   protected emitChanged(): void {
-    // 局部 cast：泛型 E 下 TS 无法静态证明 'changed' 映射到 [Snapshot<T>]，
-    // 但运行时 emit 仅按 (name, ...args) 派发，此处安全。
-    (
-      this.emit as unknown as (
-        event: 'changed',
-        snapshot: Snapshot<T>,
-      ) => void
-    )('changed', this.getSnapshot());
+    this.scheduler.schedule(this.doEmitChanged);
+  }
+
+  /** 立即同步派发挂起的 `changed`（测试 / 需要同步快照通知的场景）。 */
+  flush(): void {
+    this.scheduler.flush();
+  }
+
+  /** 释放：取消挂起的 `changed` 并移除所有监听（避免拆卸期向已卸载订阅方派发）。 */
+  destroy(): void {
+    this.scheduler.clear();
+    this.removeAllListeners();
   }
 
   /** 清空并可选地用新列表初始化。 */
