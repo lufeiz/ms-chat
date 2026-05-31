@@ -3,6 +3,9 @@ import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
 export default defineConfig({
+  // 相对 base，使 worker / 动态 chunk 的资源 URL 为包内相对路径（如 ./assets/xxx），
+  // 否则 lib 默认 base '/' 会生成绝对路径，消费方运行时解析到站点根而非包目录。
+  base: './',
   resolve: {
     alias: {
       '@': '/src/',
@@ -11,6 +14,11 @@ export default defineConfig({
   define: {
     // DEV 校验层开关；PROD 构建折叠为 false 以便消费方 DCE（RFC §2.1.9）。
     __DEV__: JSON.stringify(process.env.NODE_ENV !== 'production'),
+  },
+  // MarkdownWorker 用 `new Worker(new URL('./markdown.worker.ts', import.meta.url), { type: 'module' })`，
+  // 以 ES 格式产出 worker chunk（marked 打入其中，不污染主 bundle）。
+  worker: {
+    format: 'es',
   },
   build: {
     commonjsOptions: {

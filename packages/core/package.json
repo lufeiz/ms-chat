@@ -41,11 +41,13 @@
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
     "d3-array": "3.2.4",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.21",
+    "marked": "^18.0.4"
   },
   "devDependencies": {
     "@types/d3-array": "^3.2.1",
     "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/web-worker": "^4.1.7",
     "jsdom": "^29.1.1",
     "vitest": "^4.1.7"
   }
