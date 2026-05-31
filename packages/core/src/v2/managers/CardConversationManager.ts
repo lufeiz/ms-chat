@@ -1,5 +1,6 @@
 import type { CardContent, CardMessage } from '../../model';
 import { isDevMode } from '../core/devMode';
+import { IS_DEV } from '../core/env';
 import {
   BaseStatefulManager,
   type StatefulManagerOptions,
@@ -233,7 +234,7 @@ export class CardConversationManager extends BaseStatefulManager<CardConversatio
   getMessages(): ReadonlyArray<AnimatedCardMessage> {
     if (!this.cachedMessages) {
       this.cachedMessages =
-        __DEV__ && isDevMode() ? Object.freeze(this.messages.slice()) : this.messages;
+        IS_DEV && isDevMode() ? Object.freeze(this.messages.slice()) : this.messages;
     }
     return this.cachedMessages;
   }
@@ -253,7 +254,7 @@ export class CardConversationManager extends BaseStatefulManager<CardConversatio
         lastUserInput: this.lastUserInput,
         metadata: this.metadata,
       };
-      this.cachedContext = __DEV__ && isDevMode() ? Object.freeze(ctx) : ctx;
+      this.cachedContext = IS_DEV && isDevMode() ? Object.freeze(ctx) : ctx;
     }
     return this.cachedContext;
   }

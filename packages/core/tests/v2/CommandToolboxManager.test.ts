@@ -53,6 +53,21 @@ describe('CommandToolboxManager', () => {
     expect(m.getAnimationPhase()).toBe('closing');
   });
 
+  it('close cancels a pending debounced filter (no stale repopulation)', () => {
+    const m = new CommandToolboxManager({
+      debounceFilter: 500,
+      animationDuration: 100,
+    });
+    m.register(cmd('apple', 'Apple'));
+    m.handleInput('/a'); // 安排一个 500ms 的 debounce filter
+    const onFilter = vi.fn();
+    m.on('toolbox:filter', onFilter);
+    m.close(); // 在 filter fire 前关闭
+    vi.advanceTimersByTime(600); // 跨过 debounce + 关闭动画
+    expect(onFilter).not.toHaveBeenCalled(); // 挂起的 filter 不应再 fire
+    expect(m.getState().filteredCommands).toHaveLength(0);
+  });
+
   describe('navigation', () => {
     it('wraps around with ArrowDown / ArrowUp', () => {
       const m = new CommandToolboxManager({ debounceFilter: 0 });
