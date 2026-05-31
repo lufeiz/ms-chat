@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MS-Chat · Phase 3 实施计划</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #1f2733; --muted: #6b7685;
+    --line: #e3e7ec; --accent: #2f6feb; --accent-soft: #eaf1ff;
+    --green: #1a7f4b; --green-soft: #e6f5ed; --amber: #9a6700; --amber-soft: #fff4d6;
+    --red: #b3261e; --code-bg: #f3f4f6; --code-ink: #24292f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.7; font-size: 15px;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 32px 24px 80px; }
+  header.page {
+    background: linear-gradient(135deg, #2f6feb 0%, #5b8def 100%);
+    color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 28px;
+    box-shadow: 0 6px 24px rgba(47,111,235,.18);
+  }
+  header.page h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: .3px; }
+  header.page .sub { opacity: .92; font-size: 14px; }
+  .meta-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+    padding: 4px 11px; border-radius: 999px; backdrop-filter: blur(4px);
+  }
+  .toc {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 22px; margin-bottom: 28px;
+  }
+  .toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 10px; }
+  .toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 32px; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  section.card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 28px; margin-bottom: 22px; box-shadow: 0 1px 2px rgba(16,24,40,.04);
+  }
+  h2.sec { margin: 0 0 4px; font-size: 21px; display: flex; align-items: center; gap: 12px; }
+  h3 { margin: 22px 0 8px; font-size: 16px; color: var(--ink); }
+  h4 { margin: 16px 0 6px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  p { margin: 8px 0; }
+  .tag {
+    font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 6px;
+    background: var(--accent-soft); color: var(--accent); white-space: nowrap;
+  }
+  .tag.green { background: var(--green-soft); color: var(--green); }
+  .tag.amber { background: var(--amber-soft); color: var(--amber); }
+  .fix { font-size: 12px; color: var(--red); font-weight: 600; }
+  code {
+    background: var(--code-bg); color: var(--code-ink); padding: 1.5px 6px;
+    border-radius: 5px; font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; font-size: 13px;
+  }
+  pre {
+    background: #0f172a; color: #e2e8f0; border-radius: 10px; padding: 16px 18px;
+    overflow-x: auto; font-size: 13px; line-height: 1.55; margin: 12px 0;
+    font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+  .kw { color: #c792ea; } .str { color: #c3e88d; } .com { color: #6b7a8f; font-style: italic; } .fn { color: #82aaff; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+  th { background: #f0f3f7; font-weight: 600; }
+  tbody tr:nth-child(even) { background: #fafbfc; }
+  ol.steps { margin: 8px 0; padding-left: 22px; }
+  ol.steps li { margin: 5px 0; }
+  ol.cases { margin: 8px 0; padding-left: 22px; }
+  ol.cases li { margin: 6px 0; }
+  ol.cases li strong { color: var(--accent); }
+  .callout {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 12px 18px; border-radius: 0 8px 8px 0; margin: 14px 0;
+  }
+  .callout.amber { border-left-color: var(--amber); background: var(--amber-soft); }
+  .callout.green { border-left-color: var(--green); background: var(--green-soft); }
+  .verify { background: #f8fafc; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 18px; margin-top: 12px; }
+  footer { text-align: center; color: var(--muted); font-size: 12.5px; margin-top: 40px; }
+  .anchor { scroll-margin-top: 20px; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>MS-Chat · Phase 3 实施计划</h1>
+    <div class="sub">性能阶段 —— Scheduler 批处理 / ThemeManager v2 / MarkdownWorker</div>
+    <div class="meta-bar">
+      <span class="pill">📅 2026-05-31</span>
+      <span class="pill">🌿 基线 release-2.0.0</span>
+      <span class="pill">📦 @ms-chat/core/v2</span>
+      <span class="pill">⏳ 状态：待审批，未执行</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>目录</h2>
+    <ol>
+      <li><a href="#context">分支上下文</a></li>
+      <li><a href="#overview">总览</a></li>
+      <li><a href="#p31">P3-1 · Scheduler 批处理</a></li>
+      <li><a href="#p32">P3-2 · ThemeManager v2</a></li>
+      <li><a href="#p33">P3-3 · MarkdownWorker</a></li>
+      <li><a href="#decisions">执行前待拍板决策</a></li>
+      <li><a href="#advice">架构建议</a></li>
+    </ol>
+  </nav>
+
+  <section class="card anchor" id="context">
+    <h2 class="sec"><span class="num">0</span> 分支上下文</h2>
+    <table>
+      <thead><tr><th>分支</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td><code>release-2.0.0</code><br><span class="tag green">新基线</span></td>
+            <td>完整 P0–P2（v2 内核：core / transport / plugin / store / managers）+ 新版 README。<b>Phase 3 从这里拉分支。</b></td></tr>
+        <tr><td><code>release-1.0.0</code></td>
+            <td>已 reset 回 <code>84d8b19</code>（"feat: 完善readme"，P0 之前原始态），无任何 v2 / docs 代码。</td></tr>
+      </tbody>
+    </table>
+    <div class="callout green">P0–P2 全部内容安全保存在 release-2.0.0；release-1.0.0 的 rewind 零数据丢失。</div>
+  </section>
+
+  <section class="card anchor" id="overview">
+    <h2 class="sec"><span class="num">1</span> 总览</h2>
+    <table>
+      <thead><tr><th>PR</th><th>模块</th><th>解决的 RFC 问题</th><th>新依赖</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag">P3-1</span></td><td>Scheduler 批处理 + Store 接入</td><td><span class="fix">P4</span> 逐条 emit → 逐条 re-render</td><td>无</td></tr>
+        <tr><td><span class="tag">P3-2</span></td><td>ThemeManager v2</td><td><span class="fix">H10</span> 深层主题静默失效 · <span class="fix">P3</span> JSON 深克隆慢</td><td>无</td></tr>
+        <tr><td><span class="tag">P3-3</span></td><td>MarkdownWorker</td><td><span class="fix">P4</span> 主线程 parse 抢帧</td><td>marked + @vitest/web-worker</td></tr>
+      </tbody>
+    </table>
+    <p>每个 PR 独立可合，逐个验证：<code>tsc</code> + <code>vitest</code> + build（DCE 0 残留）+ react demo 实测。</p>
+  </section>
+
+  <!-- ============ P3-1 ============ -->
+  <section class="card anchor" id="p31">
+    <h2 class="sec"><span class="num">2</span> P3-1 · Scheduler 批处理 <span class="tag amber">无新依赖</span></h2>
+
+    <h3>动机</h3>
+    <p>流式输出时一个同步突发里有 N 次 <code>update()</code>，当前每次都同步 emit <code>changed</code> → 订阅者 N 次 re-render。把 <code>changed</code> 合并成每 microtask 一次。</p>
+
+    <h3>设计 <code>src/v2/core/Scheduler.ts</code></h3>
+<pre><code><span class="kw">class</span> <span class="fn">Scheduler</span> {
+  <span class="fn">schedule</span>(fn: () => <span class="kw">void</span>): <span class="kw">void</span>;  <span class="com">// 同一 fn 一个 microtask 内只跑一次</span>
+  <span class="fn">flush</span>(): <span class="kw">void</span>;                   <span class="com">// 立即同步执行挂起任务</span>
+  <span class="kw">get</span> pending(): <span class="kw">boolean</span>;
+}</code></pre>
+
+    <h3>接入 <code>BaseListStore</code></h3>
+    <ul>
+      <li>细粒度事件（<code>message:add/remove/update</code>）<b>保持同步</b>（携带具体 payload）。</li>
+      <li><code>changed</code>（快照信号）改为 <code>scheduler.schedule(emitChanged)</code> —— 一个 microtask 内多次 mutate 只发一次。</li>
+      <li>暴露 <code>store.flush()</code>（委派 scheduler）给需要同步的场景 / 测试。</li>
+      <li><code>getSnapshot()</code> 始终同步返回最新（只有事件被延迟，读不延迟）。</li>
+    </ul>
+
+    <h3>更改步骤</h3>
+    <ol class="steps">
+      <li>新增 <code>src/v2/core/Scheduler.ts</code>，导出加入 <code>v2/core/index.ts</code>。</li>
+      <li>改 <code>BaseListStore</code>：持有 <code>Scheduler</code>，<code>emitChanged()</code> 走 schedule；加 <code>flush()</code>；<code>destroy()</code> 里 flush + 清空。</li>
+      <li>改 <code>ChatStore.destroy()</code> 调用各 store flush（避免 microtask 泄漏）。</li>
+      <li>用 <code>queueMicrotask</code>（降级 <code>Promise.resolve().then</code>）。</li>
+    </ol>
+
+    <h3>完整测试用例</h3>
+    <h4>tests/v2/Scheduler.test.ts</h4>
+    <ol class="cases">
+      <li><strong>去重</strong>：同一 fn 一个 microtask 内多次 schedule → 只执行一次</li>
+      <li>不同 fn 都执行</li>
+      <li><strong>flush()</strong> 立即同步执行并清空队列</li>
+      <li>flush 后再 schedule → 下个 microtask 再跑（队列重置）</li>
+      <li>microtask 边界：<code>await Promise.resolve()</code> 后自动 flush</li>
+      <li>重入：schedule 内部再 schedule → 下一轮处理，不死循环</li>
+      <li><code>pending</code> 反映队列状态</li>
+      <li>隔离：fn 抛错不阻断同批其他 fn</li>
+    </ol>
+    <h4>追加到 tests/v2/MessageStore.test.ts</h4>
+    <ol class="cases" start="9">
+      <li><strong>批处理</strong>：同步连续 3 次 <code>add</code> → <code>changed</code> 只 emit 1 次（microtask 后），但 <code>message:add</code> emit 3 次</li>
+      <li><code>getSnapshot()</code> 在 add 之后、microtask 之前已是最新（读不延迟）</li>
+      <li><code>flush()</code> 后 <code>changed</code> 立即可见</li>
+      <li>add 后 remove 同一 tick → <code>changed</code> 一次，最终快照正确</li>
+      <li><code>destroy()</code> flush 挂起的 changed 且之后不再 emit</li>
+    </ol>
+
+    <div class="verify">
+      <h4 style="margin-top:0">验证</h4>
+      <code>tsc</code> + <code>vitest</code>（fake timers / <code>await flushMicrotasks</code>）+ build DCE 0 残留 + <b>react demo 实测</b>：流式 30Hz 更新，用 React Profiler 对比接入前后 re-render 次数（预期 N 次/突发 → 1 次/microtask）。
+    </div>
+  </section>
+
+  <!-- ============ P3-2 ============ -->
+  <section class="card anchor" id="p32">
+    <h2 class="sec"><span class="num">3</span> P3-2 · ThemeManager v2 <span class="tag amber">无新依赖</span></h2>
+
+    <h3>动机</h3>
+    <p>v1 <code>findChangedValues</code> 只递归 1 层（com→son），三层及以上改动 <span class="fix">静默失效（H10）</span>；<code>getThemeConfig</code> 用 <code>JSON.parse(JSON.stringify)</code> 深克隆，主题深时慢 <span class="fix">（P3）</span>。</p>
+
+    <h3>设计 <code>src/v2/theme/ThemeManager.ts</code>（继承 v2 EventEmitter）</h3>
+<pre><code><span class="kw">type</span> ThemeEvents = { <span class="str">'theme:change'</span>: [theme: Readonly&lt;ThemeConfig&gt;, changes: ReadonlyArray&lt;ThemeChange&gt;] };
+<span class="kw">interface</span> ThemeChange { path: <span class="kw">string</span>; cssVar: <span class="kw">string</span>; oldValue?: <span class="kw">string</span>; newValue?: <span class="kw">string</span>; }
+
+<span class="kw">class</span> <span class="fn">ThemeManager</span> <span class="kw">extends</span> <span class="fn">EventEmitter</span>&lt;ThemeEvents&gt; {
+  <span class="fn">getThemeConfig</span>(): Readonly&lt;ThemeConfig&gt;;        <span class="com">// 引用稳定, frozen, setTheme 后才换新</span>
+  <span class="fn">setThemeConfig</span>(updates: DeepPartial&lt;ThemeConfig&gt;): <span class="kw">void</span>;
+  <span class="com">// 内部: 任意层级递归 diff → 扁平 CSS var path(--mschat--a--b--c)→ 批量 apply → emit</span>
+}</code></pre>
+
+    <h3>关键点</h3>
+    <ul>
+      <li><b>深度递归 diff</b>：任意嵌套层级收集变更叶子（<span class="fix">修 H10</span>）。</li>
+      <li><b>结构化共享</b>：setTheme 合并出新 frozen 树，未变子树复用引用（替代 JSON 深克隆，<span class="fix">修 P3</span>）；getThemeConfig 返回稳定 frozen 根。</li>
+      <li><b>CSS var 命名</b>：扁平路径 <code>--mschat--${keys.join('--')}</code>，2 层与 v1 完全兼容，深层自然延伸。</li>
+      <li><b>删除语义</b>：新树缺失的叶子 → <code>removeProperty</code>。</li>
+      <li><b>SSR 守卫</b>：<code>typeof document !== 'undefined'</code> 才操作 DOM；无 document 仍维护状态 + emit。</li>
+    </ul>
+
+    <h3>更改步骤</h3>
+    <ol class="steps">
+      <li>新增 <code>src/v2/theme/ThemeManager.ts</code> + <code>src/v2/theme/index.ts</code>，<code>v2/index.ts</code> 加 <code>export * from './theme'</code>。</li>
+      <li>实现 <code>deepDiff</code>（收集 ThemeChange[]）、<code>structuralMerge</code>（写时复制）、<code>applyCssVars</code>、<code>toCssVarPath</code>。</li>
+      <li><code>DeepPartial&lt;T&gt;</code> 类型工具放 <code>v2/core</code> 或就近。</li>
+      <li>v1 <code>src/theme/themeStore.ts</code> 头部加 <code>@deprecated</code>，迁移指南补 ThemeManager 条目。</li>
+    </ol>
+
+    <h3>完整测试用例</h3>
+    <h4>tests/v2/ThemeManager.test.ts（jsdom）</h4>
+    <ol class="cases">
+      <li>浅层（2 层）变更 → 对应 <code>--mschat--com--son</code> 写入 <code>document.documentElement.style</code></li>
+      <li><strong>深层（3 层及以上）变更触发对应 CSS var（回归 H10）</strong></li>
+      <li>未变更字段不触发 <code>setProperty</code>（spy 调用次数）</li>
+      <li>同次 set 多个变更 → 批量 apply，<code>theme:change</code> emit 一次，changes 含全部路径</li>
+      <li>值设为 <code>undefined</code>/<code>null</code> → <code>removeProperty</code></li>
+      <li><strong>引用稳定</strong>：<code>getThemeConfig()</code> 多次调用返回同引用，直到下次 <code>setThemeConfig</code>（修 P3）</li>
+      <li>返回值 frozen（dev 下改抛错）</li>
+      <li><code>theme:change</code> payload：<code>(theme, changes)</code>，change 含 <code>path/cssVar/oldValue/newValue</code></li>
+      <li>结构化共享：未变子树在 set 后保持引用相等</li>
+      <li>初始 config 经构造函数 apply</li>
+      <li><strong>SSR</strong>：<code>document</code> 为 undefined 时不抛错，仍 emit <code>theme:change</code></li>
+      <li>EventEmitter 能力：<code>on('theme:change')</code> 返回 disposer 可取消</li>
+      <li>嵌套 + 删除混合：一次 set 同时新增/改/删，CSS var 对应 set/remove 正确</li>
+    </ol>
+
+    <div class="verify">
+      <h4 style="margin-top:0">验证</h4>
+      <code>tsc</code> + <code>vitest</code>（jsdom，spy <code>style.setProperty/removeProperty</code>）+ build + <b>react demo</b>：加主题切换按钮，实测深层主题改动生效（对照 v1 失效）。
+    </div>
+  </section>
+
+  <!-- ============ P3-3 ============ -->
+  <section class="card anchor" id="p33">
+    <h2 class="sec"><span class="num">4</span> P3-3 · MarkdownWorker（Web Worker 解析） <span class="tag" style="background:#fde2e1;color:#b3261e">新依赖</span></h2>
+
+    <h3>动机</h3>
+    <p>流式每个 chunk 都 re-parse markdown（高亮/表格）在主线程抢帧（<span class="fix">P4 主因</span>）。迁到 Worker。</p>
+
+    <h3>设计 <code>src/v2/workers/</code></h3>
+<pre><code><span class="kw">class</span> <span class="fn">MarkdownWorkerClient</span> {
+  <span class="fn">constructor</span>(opts?: { poolSize?: <span class="kw">number</span>; coalesce?: <span class="kw">boolean</span> });
+  <span class="fn">parse</span>(req: { id: <span class="kw">string</span>; source: <span class="kw">string</span>; options?: ParseOptions }): Promise&lt;ParseResult&gt;;
+  <span class="fn">cancel</span>(id: <span class="kw">string</span>): <span class="kw">void</span>;
+  <span class="fn">dispose</span>(): <span class="kw">void</span>;
+  <span class="fn">isFallback</span>(): <span class="kw">boolean</span>;   <span class="com">// 无 Worker 时主线程降级</span>
+}</code></pre>
+    <ul>
+      <li><b>池</b>（poolSize，默认 1）、<b>coalesce</b>（同 id 新请求自动 cancel 旧的，治流式堆积）、<b>Transferable</b>（大 source 用 ArrayBuffer）、<b>SSR/降级</b>（<code>typeof Worker==='undefined'</code> → 主线程同步 parse，API 不变）。</li>
+      <li>Worker 内用纯 markdown lib；不引 React/Vue。</li>
+      <li>接入：core 提供 client，react/vue demo 负责实例化注入（不强耦合）。</li>
+    </ul>
+
+    <h3>更改步骤</h3>
+    <ol class="steps">
+      <li>新增 <code>protocol.ts</code>（消息类型）、<code>markdown.worker.ts</code>（Worker 实现）、<code>MarkdownWorker.ts</code>（主线程 client）、<code>index.ts</code>；<code>v2/index.ts</code> 导出 client。</li>
+      <li><code>new Worker(new URL('./markdown.worker.ts', import.meta.url), { type: 'module' })</code>（vite 原生）。</li>
+      <li>vite.config 处理 worker 入口；package.json 加 marked + @vitest/web-worker（devDep）。</li>
+      <li>主线程 fallback 路径共享同一 parse 实现。</li>
+    </ol>
+
+    <h3>完整测试用例</h3>
+    <h4>tests/v2/MarkdownWorker.test.ts（@vitest/web-worker）</h4>
+    <ol class="cases">
+      <li>基础 parse：markdown → html + meta（headings/codeBlocks 数正确）</li>
+      <li>并发 3 个不同 id → 全 resolve，html 互不串</li>
+      <li><strong>coalesce</strong>：同 id 两次请求，先发的被 cancel（reject AbortError），后发 resolve</li>
+      <li>主动 <code>cancel(id)</code> → 对应 promise reject</li>
+      <li><code>dispose()</code> 后 parse 调用 reject 'disposed'</li>
+      <li><strong>SSR fallback</strong>：<code>globalThis.Worker=undefined</code> → <code>isFallback()</code> true，parse 主线程完成，行为一致</li>
+      <li>worker 抛错 → 该 id reject，其他 in-flight 不受影响</li>
+      <li>poolSize&gt;1 负载均衡（spy）</li>
+      <li>空 source → 空 html，不崩</li>
+      <li>options（highlightLanguages/streamingMode）透传</li>
+    </ol>
+
+    <div class="verify">
+      <h4 style="margin-top:0">验证</h4>
+      <code>tsc</code> + <code>vitest</code>（web-worker 插件）+ build（确认 worker chunk 产出）+ <b>react demo</b>：流式渲染接入 worker，Performance 面板对比主线程 long task（预期 30ms+/chunk → &lt;5ms）。
+    </div>
+  </section>
+
+  <!-- ============ Decisions ============ -->
+  <section class="card anchor" id="decisions">
+    <h2 class="sec"><span class="num">5</span> 执行前待拍板决策</h2>
+    <table>
+      <thead><tr><th>决策</th><th>选项</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Markdown 库</b><br>（仅影响 P3-3）</td>
+          <td>
+            <b>marked</b>（~30KB，轻、Worker 友好，<span class="tag green">推荐</span>）·
+            <b>markdown-it</b>（生态大、体积略大）·
+            <b>不绑定可注入</b>（core 只给 Worker 基建，解析器消费方传入）
+          </td>
+        </tr>
+        <tr>
+          <td><b>执行范围</b></td>
+          <td>
+            三个全做 · <b>先 P3-1 + P3-2</b>（无新依赖、低风险，<span class="tag green">推荐</span>）· 只先 P3-1
+          </td>
+        </tr>
+        <tr>
+          <td><b>计划落档</b></td>
+          <td>已生成本 HTML；可另存 <code>docs/phase3-plan.md</code> · 或看过即可</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ Advice ============ -->
+  <section class="card anchor" id="advice">
+    <h2 class="sec"><span class="num">6</span> 架构建议</h2>
+    <div class="callout green">
+      <p style="margin-top:0"><b>先 P3-1 + P3-2。</b></p>
+      <p>这两个零新依赖、收益明确（批处理直接砍流式 re-render；ThemeManager 修 H10 深层失效 + 去 JSON 深克隆），风险可控。</p>
+      <p style="margin-bottom:0">P3-3 MarkdownWorker 牵涉新依赖 + Worker 构建 + 测试基建，且 RFC 里它本就是"可选注入"，独立成一轮更稳。若做，Markdown 库选 <b>marked</b>（轻、Worker 友好）。</p>
+    </div>
+  </section>
+
+  <footer>
+    MS-Chat 重构 · Phase 3 计划 · 生成于 2026-05-31 · 基线 release-2.0.0 · 待审批
+  </footer>
+
+</div>
+</body>
+</html>
