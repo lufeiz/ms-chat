@@ -87,8 +87,11 @@ export class ConversationStore extends BaseListStore<
   }
 
   init(conversations: ReadonlyArray<Conversation> = []): void {
+    const hadCurrent = this.current !== null;
     this.setList(conversations);
     this.current = null;
+    // 与 remove/update 一致：重置清空了当前会话时，通知 conversation:current 订阅者
+    if (hadCurrent) this.emit('conversation:current', null);
     this.emit('conversation:init');
     this.emitChanged();
   }
