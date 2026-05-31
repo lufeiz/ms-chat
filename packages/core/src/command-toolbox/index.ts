@@ -181,6 +181,8 @@ export class CommandToolboxManager extends EventEmitter {
         if (!this.visible) return;
 
         this.clearAnimationTimer();
+        // 取消挂起的 debounce filter，否则它可能在关闭后 fire 并用旧 query 回填隐藏态
+        this.clearFilterTimer();
 
         this.setAnimation('closing');
         this.emit(COMMAND_TOOLBOX_ACTION_TYPE.CLOSE, this.getState());
