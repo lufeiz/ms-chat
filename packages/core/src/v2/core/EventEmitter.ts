@@ -1,4 +1,5 @@
 import { isDevMode } from './devMode';
+import { IS_DEV } from './env';
 
 /** 取消订阅 / 注销 / 移除监听的无参函数。 */
 export type Disposer = () => void;
@@ -113,7 +114,7 @@ export class EventEmitter<
         if (this.stopOnError) {
           throw err;
         }
-        if (__DEV__ && isDevMode() && !this.onError) {
+        if (IS_DEV && isDevMode() && !this.onError) {
           // 无 onError 时在 DEV 暴露被吞掉的异常，避免静默失败。PROD 下整段被 DCE。
           console.error(
             `[ms-chat/core] listener for "${String(event)}" threw:`,
@@ -150,10 +151,10 @@ export class EventEmitter<
     entries.push({ fn, original: original ?? fn, once });
     this.events.set(event, entries);
 
-    // __DEV__ 守卫使整段泄漏检测在 PROD 构建被 DCE（连同字符串字面量），
-    // 测试期 __DEV__=true 时再由 isDevMode() 提供 dev/prod 运行时切换。
+    // IS_DEV 守卫使整段泄漏检测在 PROD 构建被 DCE（连同字符串字面量），
+    // 测试期 IS_DEV=true 时再由 isDevMode() 提供 dev/prod 运行时切换。
     if (
-      __DEV__ &&
+      IS_DEV &&
       isDevMode() &&
       entries.length > this.maxListeners &&
       !this.warnedEvents.has(event)
