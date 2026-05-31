@@ -132,15 +132,18 @@ Done！现在你已经拥有：✅ 会话列表 ✅ 流式对话 ✅ 文件上�
 
 ```ts
 import {
-  EventEmitter,       // 类型化、错误隔离、可取消 once
-  SSEClient,          // 可复用、重连退避
-  PluginSystem,       // before/transform/after/error + 热卸载
-  MessageStore,       // 引用稳定 snapshot
+  EventEmitter,         // 类型化、错误隔离、可取消 once
+  SSEClient,            // 可复用、重连退避
+  PluginSystem,         // before/transform/after/error + 热卸载
+  MessageStore,         // 引用稳定 snapshot + microtask 批处理
   ConversationStore,
-  ChatStore,          // 组合各子 store + 实例级 ComponentRegistry
+  ChatStore,            // 组合各子 store + 实例级 ComponentRegistry
+  ThemeManager,         // 深度递归 diff + 结构化共享，继承 EventEmitter
+  Scheduler,            // microtask 批处理调度
+  MarkdownWorkerClient, // Web Worker markdown 解析（池/coalesce/SSR fallback）
   CardConversationManager,
   CommandToolboxManager,
-  setDevMode,         // 测试期切换 dev/prod 校验
+  setDevMode,           // 测试期切换 dev/prod 校验
 } from '@ms-chat/core/v2';
 ```
 
@@ -184,7 +187,7 @@ pnpm --filter @ms-chat/core typecheck      # tsc 校验 src + tests
 | P0 | 清洁（删裸 .js、修 build、修类型）+ vitest 基建 | ✅ |
 | P1 | 健壮性：EventEmitter / SSEClient / PluginSystem + devMode | ✅ |
 | P2 | 扩展性：引用稳定 Store 层 / ChatStore / ComponentRegistry / Manager | ✅ |
-| P3 | 性能：Scheduler 批处理 / ThemeManager v2 / MarkdownWorker | 规划中 |
+| P3 | 性能：Scheduler 批处理 / ThemeManager v2 / MarkdownWorker（Web Worker 解析） | ✅ |
 | P4 | GA & 工程化：CI / 共享构建配置 | 规划中 |
 
 ## 😄 开发群
