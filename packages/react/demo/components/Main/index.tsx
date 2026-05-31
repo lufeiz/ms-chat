@@ -225,9 +225,11 @@ const Main: React.FC<MainProps> = ({ mode }) => {
         url: '/openapi/abp/v1/chat/completions',
         headers: {
           'Content-Type': 'application/json',
-          'app-id': '471068217232781312',
-          'api-key': 'ak-170003c900a64f899eec',
-          Authorization: 'Bearer sk-b3571aa64a494b42a371',
+          'app-id': import.meta.env.VITE_MS_APP_ID ?? '',
+          'api-key': import.meta.env.VITE_MS_API_KEY ?? '',
+          Authorization: import.meta.env.VITE_MS_TOKEN
+            ? `Bearer ${import.meta.env.VITE_MS_TOKEN}`
+            : '',
         },
         openWhenHidden: true,
         body: {

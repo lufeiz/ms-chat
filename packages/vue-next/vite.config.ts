@@ -29,17 +29,18 @@ export default defineConfig({
       },
     },
     server: {
+      // 网关地址改用环境变量，勿把内网域名写死进仓库。例：VITE_PROXY_OPENAPI=https://your-gateway pnpm dev
       proxy: {
         '/openapi': {
-          target: 'http://ai-gateway.maipuat.msxf.test', // 目标服务器地址
-          changeOrigin: true // 是否改变源地址
+          target: process.env.VITE_PROXY_OPENAPI || 'http://localhost:8080',
+          changeOrigin: true,
         },
         '/fin': {
-          target: 'http://fmp-ctest3.msxf.msxfyun.test/',
+          target: process.env.VITE_PROXY_FIN || 'http://localhost:8080',
           changeOrigin: true,
         },
         '/api': {
-          target: 'http://gbi-core-zhangfubing-8080.msxf.msxfyun.test/',
+          target: process.env.VITE_PROXY_API || 'http://localhost:8080',
           changeOrigin: true,
         }
       }
