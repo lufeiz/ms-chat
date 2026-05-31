@@ -11,11 +11,14 @@ interface FetchOptions {
 
 const DEFAULT_TIMEOUT = 90_000;
 
+// 凭证从环境变量读取（见 .env.example），切勿硬编码进仓库
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
-  'app-id': '471068217232781312',
-  'api-key': 'ak-170003c900a64f899eec',
-  Authorization: 'Bearer sk-b3571aa64a494b42a371',
+  'app-id': import.meta.env.VITE_MS_APP_ID ?? '',
+  'api-key': import.meta.env.VITE_MS_API_KEY ?? '',
+  Authorization: import.meta.env.VITE_MS_TOKEN
+    ? `Bearer ${import.meta.env.VITE_MS_TOKEN}`
+    : '',
 };
 
 /**
