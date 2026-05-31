@@ -51,6 +51,11 @@ function extractMeta(source: string): MarkdownMeta {
 /**
  * 纯函数：markdown → { html, meta }。**无副作用、不依赖 DOM**，因此
  * Worker 与主线程 fallback 可共用同一实现，避免两份解析逻辑漂移。
+ *
+ * ⚠️ **安全：返回的 `html` 未经消毒**。marked 默认不 sanitize，原始 HTML 原样输出。
+ * 若 `source` 来自不可信来源（LLM 输出 / 用户输入），消费方在写入 DOM（innerHTML /
+ * dangerouslySetInnerHTML / v-html）前**必须**先用 DOMPurify 等消毒，否则会 XSS。
+ * （react/vue 适配组件已自带消毒；接 MarkdownWorker 的集成侧消毒计划在后续阶段统一。）
  */
 export function parseMarkdown(
   source: string,
