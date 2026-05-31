@@ -31,7 +31,7 @@ monorepo，子包位于 `packages/`：
 | --- | --- |
 | `@ms-chat/core` | 框架无关的公共逻辑、类型定义。`v1`（默认入口）+ `v2`（子路径 `./v2`）双轨 |
 | `@ms-chat/react` | React 基础组件 |
-| `@ms-chat/vue-next` | Vue 3 基础组件 |
+| `@ms-chat/vue` | Vue 3 基础组件（目录 `packages/vue-next`） |
 
 目标是 react / vue 尽量保持 API 一致，可复用内容尽量下沉到 core 复用。
 
@@ -45,7 +45,7 @@ v2 各能力模块统一构建在 `core`（EventEmitter / Scheduler / devMode）
 graph TB
   subgraph consumers["消费方 Apps"]
     R["@ms-chat/react"]
-    V["@ms-chat/vue-next"]
+    V["@ms-chat/vue"]
   end
   subgraph core["@ms-chat/core"]
     V1["v1 入口（默认 · @deprecated）"]
@@ -293,13 +293,16 @@ pnpm --filter @ms-chat/core typecheck      # tsc 校验 src + tests
 ```
 
 - 体验组件：进入 `packages/react` 或 `packages/vue-next`，查看 `demo/` 目录运行示例。
-- 运行 **v2 验证 demo**（自包含，演示引用稳定订阅 + 流式批处理）：
+- 运行 **v2 验证 demo**（自包含，演示引用稳定订阅 + 流式批处理）。demo 经 workspace 解析
+  `@ms-chat/core` 的 **dist**（gitignore，clean checkout 无），故先构建一次 core：
 
 ```bash
-# React v2 demo
-pnpm --filter @ms-chat/react exec vite demo/v2 --config vite.dev.config.ts --port 5191
-# Vue v2 demo
-pnpm --filter @ms-chat/vue-next exec vite demo/v2 --config vite.config.ts --port 5192
+# 1. 先构建 core（或 `pnpm --filter @ms-chat/core dev` 开 watch）
+pnpm --filter @ms-chat/core build
+
+# 2. 启动 demo（demo/v2 作为 Vite root）
+pnpm --filter @ms-chat/react exec vite demo/v2 --config vite.dev.config.ts --port 5191  # React → localhost:5191
+pnpm --filter @ms-chat/vue   exec vite demo/v2 --config vite.config.ts     --port 5192  # Vue   → localhost:5192
 ```
 
 > CI：每次 push / PR 自动跑 `@ms-chat/core` 的 typecheck（strict）+ test（覆盖率门槛）+ build，见 [.github/workflows/ci.yml](.github/workflows/ci.yml)。
