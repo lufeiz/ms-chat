@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [release-2.0.0, release-1.0.0, main]
+  pull_request:
+
+# 同一分支/PR 的新提交取消上一次仍在跑的 CI
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: '@ms-chat/core · typecheck · test · build'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck (src + tests, strict)
+        run: pnpm --filter @ms-chat/core typecheck
+
+      - name: Test + coverage gate
+        run: pnpm --filter @ms-chat/core test:coverage
+
+      - name: Build (verify lib + worker chunk emit)
+        run: pnpm --filter @ms-chat/core build
