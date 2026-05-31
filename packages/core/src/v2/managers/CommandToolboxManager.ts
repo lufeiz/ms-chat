@@ -1,4 +1,5 @@
 import { isDevMode } from '../core/devMode';
+import { IS_DEV } from '../core/env';
 import type { Disposer } from '../core/EventEmitter';
 import {
   BaseStatefulManager,
@@ -197,6 +198,8 @@ export class CommandToolboxManager extends BaseStatefulManager<CommandToolboxEve
   close(): void {
     if (!this.visible) return;
     if (this.animationTimer) this.clearTimer(this.animationTimer);
+    // 取消挂起的 debounce filter，否则它可能在关闭后 fire 并用旧 query 回填隐藏态
+    if (this.filterTimer) this.clearTimer(this.filterTimer);
     this.setAnimation('closing');
     this.emit('toolbox:close', this.getState());
     this.animationTimer = this.schedule(() => {
@@ -292,7 +295,7 @@ export class CommandToolboxManager extends BaseStatefulManager<CommandToolboxEve
         query: this.query,
         triggerChar: this.triggerChar,
       };
-      this.cachedState = __DEV__ && isDevMode() ? Object.freeze(state) : state;
+      this.cachedState = IS_DEV && isDevMode() ? Object.freeze(state) : state;
     }
     return this.cachedState;
   }
