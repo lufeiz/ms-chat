@@ -32,6 +32,14 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 }
 
 /**
+ * 危险键：合并外部 JSON（JSON.parse 会把 "__proto__" 变成 own 可枚举键）时跳过，
+ * 防止递归赋值污染 Object.prototype（原型链污染）。
+ */
+function isUnsafeKey(key: string): boolean {
+  return key === '__proto__' || key === 'constructor' || key === 'prototype';
+}
+
+/**
  * 收集 updates 相对 base 的变更（只遍历 updates 出现的键）。任意嵌套层级递归到叶子，
  * 修复 v1 仅递归 1 层导致深层改动静默失效的问题（H10）。叶子值为 `undefined` 视为删除。
  */
@@ -76,6 +84,7 @@ function collectChanges(
 ): ThemeChange[] {
   const changes: ThemeChange[] = [];
   for (const key of Object.keys(updates)) {
+    if (isUnsafeKey(key)) continue; // 原型链污染防护
     const next = updates[key];
     const prev = base?.[key];
     const nextPath = [...path, key];
@@ -112,6 +121,7 @@ function structuralMerge<T extends Record<string, any>>(
 ): T {
   const result: Record<string, unknown> = { ...base };
   for (const key of Object.keys(updates)) {
+    if (isUnsafeKey(key)) continue; // 原型链污染防护
     const u = updates[key];
     if (u === undefined) {
       // 清除该分支：删除键，使 getThemeConfig 不再包含它（CSS 变量由 collectChanges 移除）
