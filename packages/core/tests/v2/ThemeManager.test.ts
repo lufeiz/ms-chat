@@ -203,4 +203,35 @@ describe('ThemeManager', () => {
     ]);
     expect(changes.every((c) => c.newValue === undefined)).toBe(true);
   });
+
+  describe('prototype pollution guard', () => {
+    it('does not pollute Object.prototype via a top-level __proto__ key', () => {
+      const tm = new ThemeManager();
+      // JSON.parse 让 "__proto__" 成为 own 可枚举键（模拟后端下发的恶意主题）
+      const malicious = JSON.parse('{"__proto__": {"polluted": "yes"}}');
+      tm.setThemeConfig(malicious);
+      expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+    });
+
+    it('does not pollute via a nested __proto__ key', () => {
+      const tm = new ThemeManager();
+      const malicious = JSON.parse(
+        '{"header": {"__proto__": {"polluted2": "yes"}}}',
+      );
+      tm.setThemeConfig(malicious);
+      expect(({} as Record<string, unknown>).polluted2).toBeUndefined();
+    });
+
+    it('ignores constructor/prototype keys without throwing', () => {
+      const tm = new ThemeManager();
+      const malicious = JSON.parse(
+        '{"constructor": {"x": "1"}, "prototype": {"y": "2"}, "header": {"bg": "#000"}}',
+      );
+      expect(() => tm.setThemeConfig(malicious)).not.toThrow();
+      // 合法字段仍生效
+      expect(
+        (tm.getThemeConfig() as { header?: { bg?: string } }).header?.bg,
+      ).toBe('#000');
+    });
+  });
 });
