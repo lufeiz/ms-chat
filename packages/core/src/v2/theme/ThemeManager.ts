@@ -35,6 +35,39 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  * 收集 updates 相对 base 的变更（只遍历 updates 出现的键）。任意嵌套层级递归到叶子，
  * 修复 v1 仅递归 1 层导致深层改动静默失效的问题（H10）。叶子值为 `undefined` 视为删除。
  */
+function leafChange(
+  path: string[],
+  oldValue: unknown,
+  newValue: unknown,
+  prefix: string,
+): ThemeChange {
+  return {
+    path: path.join('.'),
+    cssVar: `--${prefix}--${path.join('--')}`,
+    oldValue: oldValue as string | undefined,
+    newValue: newValue as string | undefined,
+  };
+}
+
+/** 枚举一个子树的全部叶子，生成移除变更（newValue=undefined）。 */
+function removeSubtree(
+  subtree: Record<string, unknown>,
+  path: string[],
+  prefix: string,
+): ThemeChange[] {
+  const changes: ThemeChange[] = [];
+  for (const key of Object.keys(subtree)) {
+    const val = subtree[key];
+    const nextPath = [...path, key];
+    if (isPlainObject(val)) {
+      changes.push(...removeSubtree(val, nextPath, prefix));
+    } else if (val !== undefined) {
+      changes.push(leafChange(nextPath, val, undefined, prefix));
+    }
+  }
+  return changes;
+}
+
 function collectChanges(
   base: Record<string, unknown> | undefined,
   updates: Record<string, unknown>,
@@ -55,13 +88,15 @@ function collectChanges(
           prefix,
         ),
       );
+    } else if (isPlainObject(prev)) {
+      // 用叶子 / undefined 覆盖一个子树：移除旧子树的**全部后代** CSS 变量，
+      // 否则像 setThemeConfig({ header: undefined }) 会残留 --mschat--header--bg 等。
+      changes.push(...removeSubtree(prev, nextPath, prefix));
+      if (next !== undefined) {
+        changes.push(leafChange(nextPath, undefined, next, prefix));
+      }
     } else if (prev !== next) {
-      changes.push({
-        path: nextPath.join('.'),
-        cssVar: `--${prefix}--${nextPath.join('--')}`,
-        oldValue: prev as string | undefined,
-        newValue: next as string | undefined,
-      });
+      changes.push(leafChange(nextPath, prev, next, prefix));
     }
   }
   return changes;
@@ -78,7 +113,10 @@ function structuralMerge<T extends Record<string, any>>(
   const result: Record<string, unknown> = { ...base };
   for (const key of Object.keys(updates)) {
     const u = updates[key];
-    if (isPlainObject(u)) {
+    if (u === undefined) {
+      // 清除该分支：删除键，使 getThemeConfig 不再包含它（CSS 变量由 collectChanges 移除）
+      delete result[key];
+    } else if (isPlainObject(u)) {
       const b = (base as Record<string, unknown>)[key];
       result[key] = structuralMerge(
         (isPlainObject(b) ? b : {}) as Record<string, any>,

@@ -159,4 +159,48 @@ describe('ThemeManager', () => {
     expect(setSpy).toHaveBeenCalledWith('--mschat--base--font-size', '14px');
     expect(removeSpy).toHaveBeenCalledWith('--mschat--header--height');
   });
+
+  it('clearing a whole branch removes all descendant CSS vars (and drops the section)', () => {
+    const tm = new ThemeManager();
+    tm.setThemeConfig({ header: { bg: '#000', height: '4em' } });
+    expect(cssVar('--mschat--header--bg')).toBe('#000');
+    expect(cssVar('--mschat--header--height')).toBe('4em');
+
+    tm.setThemeConfig({ header: undefined }); // 清整个分支
+
+    // 所有后代变量都应被移除，而非残留
+    expect(cssVar('--mschat--header--bg')).toBe('');
+    expect(cssVar('--mschat--header--height')).toBe('');
+    // getThemeConfig 不再包含该 section
+    expect('header' in (tm.getThemeConfig() as Record<string, unknown>)).toBe(false);
+  });
+
+  it('clearing a deep nested branch removes all deep descendants', () => {
+    const tm = new ThemeManager<{ a: { b: { c: string; d: string } } }>();
+    tm.setThemeConfig({ a: { b: { c: '#111', d: '#222' } } });
+    expect(cssVar('--mschat--a--b--c')).toBe('#111');
+    expect(cssVar('--mschat--a--b--d')).toBe('#222');
+
+    tm.setThemeConfig({ a: { b: undefined } }); // 清 a.b 子树
+
+    expect(cssVar('--mschat--a--b--c')).toBe('');
+    expect(cssVar('--mschat--a--b--d')).toBe('');
+  });
+
+  it('clearing a branch emits theme:change with removal entries', () => {
+    const tm = new ThemeManager();
+    tm.setThemeConfig({ header: { bg: '#000', height: '4em' } });
+    const onChange = vi.fn();
+    tm.on('theme:change', onChange);
+    tm.setThemeConfig({ header: undefined });
+    const changes = onChange.mock.calls[0][1] as Array<{
+      cssVar: string;
+      newValue: string | undefined;
+    }>;
+    expect(changes.map((c) => c.cssVar).sort()).toEqual([
+      '--mschat--header--bg',
+      '--mschat--header--height',
+    ]);
+    expect(changes.every((c) => c.newValue === undefined)).toBe(true);
+  });
 });
