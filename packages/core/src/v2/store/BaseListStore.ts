@@ -1,5 +1,6 @@
 import { EventEmitter } from '../core/EventEmitter';
 import { isDevMode } from '../core/devMode';
+import { IS_DEV } from '../core/env';
 
 /** 带版本号的不可变列表视图。订阅方可用引用相等（===）判断是否变化。 */
 export interface Snapshot<T> {
@@ -48,7 +49,7 @@ export abstract class BaseListStore<
   /** 写时复制：替换内部列表、自增版本、失效快照缓存。子类所有写操作必须走这里。 */
   protected setList(next: ReadonlyArray<T>): void {
     this.list =
-      __DEV__ && isDevMode()
+      IS_DEV && isDevMode()
         ? (Object.freeze(next.slice()) as ReadonlyArray<T>)
         : next;
     this._version += 1;
