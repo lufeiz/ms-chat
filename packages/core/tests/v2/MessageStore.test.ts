@@ -35,6 +35,15 @@ describe('MessageStore', () => {
       store.add(text('b'));
       expect(store.getSnapshot().data.map((m) => m.id)).toEqual(['a', 'b']);
     });
+
+    it('init copies the incoming array (prod mode) so later caller mutation cannot leak in', () => {
+      setDevMode(false); // 走 prod 分支（dev 分支本就 slice+freeze）
+      const store = new MessageStore();
+      const external = [text('a'), text('b')];
+      store.init(external);
+      external.push(text('c')); // 调用方事后篡改外部数组
+      expect(store.getSnapshot().data).toHaveLength(2); // 不应泄漏进快照
+    });
   });
 
   describe('emit timing', () => {

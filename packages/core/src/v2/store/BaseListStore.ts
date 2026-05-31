@@ -48,10 +48,11 @@ export abstract class BaseListStore<
 
   /** 写时复制：替换内部列表、自增版本、失效快照缓存。子类所有写操作必须走这里。 */
   protected setList(next: ReadonlyArray<T>): void {
-    this.list =
-      IS_DEV && isDevMode()
-        ? (Object.freeze(next.slice()) as ReadonlyArray<T>)
-        : next;
+    // 始终复制：调用方可能传入外部数组（如 init/reset 传入业务侧的列表），
+    // 若直接持有其引用，调用方之后对该数组的 mutation 会绕过 version/changed
+    // 改变 getSnapshot().data，破坏引用稳定契约。复制成本相对渲染可忽略。
+    const copy = next.slice();
+    this.list = IS_DEV && isDevMode() ? (Object.freeze(copy) as ReadonlyArray<T>) : copy;
     this._version += 1;
     this.cachedSnapshot = null;
   }
