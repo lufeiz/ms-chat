@@ -35,6 +35,52 @@ monorepo，子包位于 `packages/`：
 
 目标是 react / vue 尽量保持 API 一致，可复用内容尽量下沉到 core 复用。
 
+## 🏛️ 架构总览
+
+框架适配层（react / vue）保持薄，状态与逻辑下沉到框架无关的 `@ms-chat/core`。
+core 内部 **v1 / v2 双轨**：v1 为默认入口并逐步 `@deprecated`，v2 经子路径 `@ms-chat/core/v2` 独立 tree-shaking。
+v2 各能力模块统一构建在 `core`（EventEmitter / Scheduler / devMode）这块基石之上。
+
+```mermaid
+graph TB
+  subgraph consumers["消费方 Apps"]
+    R["@ms-chat/react"]
+    V["@ms-chat/vue-next"]
+  end
+  subgraph core["@ms-chat/core"]
+    V1["v1 入口（默认 · @deprecated）"]
+    subgraph V2["v2 · @ms-chat/core/v2"]
+      F["core · 基石<br/>EventEmitter · Scheduler · devMode"]
+      T["transport · SSEClient"]
+      P["plugin · PluginSystem"]
+      S["store · BaseListStore · ChatStore · ComponentRegistry"]
+      M["managers · Base / Card / CommandToolbox"]
+      TH["theme · ThemeManager"]
+      W["workers · MarkdownWorkerClient（+ Worker chunk）"]
+    end
+  end
+  R --> V1
+  V --> V1
+  R --> V2
+  V --> V2
+  T --> F
+  P --> F
+  S --> F
+  M --> F
+  TH --> F
+  W --> F
+```
+
+| v2 模块 | 子路径下导出 | 职责 |
+| --- | --- | --- |
+| `core` | `EventEmitter` · `Scheduler` · `setDevMode` | 错误隔离事件总线、microtask 批处理、dev 校验开关 |
+| `transport` | `SSEClient` | 可复用 SSE 连接 + 重连退避 |
+| `plugin` | `PluginSystem` · `createWrappedFunction` | before/transform/after/error 流水线 + 热卸载 |
+| `store` | `MessageStore` · `ConversationStore` · `ConfigStore` · `MsgInputStore` · `ChatStore` · `ComponentRegistry` | 引用稳定状态层，实例级隔离 |
+| `managers` | `CardConversationManager` · `CommandToolboxManager` | 含动画/定时器的有状态管理器（继承 `BaseStatefulManager`） |
+| `theme` | `ThemeManager` | 深度递归 diff + 结构化共享，继承 EventEmitter |
+| `workers` | `MarkdownWorkerClient` | Web Worker markdown 解析（池 / coalesce / SSR 降级） |
+
 ## 🚀 快速开始（@ms-chat/react）
 
 1. 安装
@@ -149,6 +195,81 @@ import {
 
 详细 API 与从 v1 的迁移见 [docs/migration-v1-to-v2.md](docs/migration-v1-to-v2.md)。
 
+## 🔄 核心数据流与机制
+
+### 1）流式消息：批处理订阅
+
+流式输出时每个 chunk 都会 `update` 消息，但细粒度事件（`message:add/update`）**同步**触发，
+而广播给 UI 的 `changed` 走 `Scheduler` 的 **microtask 批处理**：一个同步突发里的多次变更
+只派发一次 `changed`，订阅方据「引用稳定快照」用 `prev === next` 短路无谓 re-render。
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant App as 业务 / UI
+  participant SSE as SSEClient
+  participant MS as MessageStore
+  participant SC as Scheduler
+  participant UI as React / Vue 订阅
+  App->>SSE: connect(url, body, reconnect)
+  loop 每个 SSE chunk
+    SSE-->>App: onMessage(data)
+    App->>MS: update(id, content)
+    MS->>MS: 写时复制 + version++
+    MS->>SC: schedule(emitChanged)
+  end
+  Note over SC: 同一 microtask 多次 schedule<br/>按函数去重 → 合并为一次
+  SC->>UI: changed(snapshot)
+  UI->>UI: prev === next ? 跳过 : re-render
+```
+
+### 2）插件流水线
+
+`PluginSystem` 把目标函数包成 `before → transform → 原函数 → after` 的异步流水线；
+任一阶段抛错跳到 `error` 钩子并 rethrow。`before` 返回 `false` 可短路，`transform` 可改写
+下游 args 或直接返回 result 短路原函数。
+
+```mermaid
+flowchart LR
+  IN(["wrapped 调用"]) --> BEF["before"]
+  BEF -->|"return false"| SHORT(["短路 → 返回 false"])
+  BEF --> TRA["transform<br/>改 args / 返回 result 短路"]
+  TRA --> FN["原函数"]
+  FN --> AFT["after"]
+  AFT --> OUT(["返回结果"])
+  BEF -.->|抛错| ERRH["error 钩子"]
+  TRA -.->|抛错| ERRH
+  FN -.->|抛错| ERRH
+  ERRH --> RT(["rethrow"])
+```
+
+### 3）MarkdownWorker：离主线程解析
+
+`MarkdownWorkerClient` 把 markdown 解析放到 Web Worker，避免流式 re-parse 抢主线程帧。
+无 Worker（SSR / 旧环境）时自动降级到主线程（动态 import 解析器，marked 不进主 bundle）。
+Worker 无状态——coalesce / cancel 全靠 client 侧的 `seq` 关联。
+
+```mermaid
+flowchart TB
+  CALL["client.parse(id, source)"] --> HASW{"运行环境有 Worker?"}
+  HASW -->|"否（SSR / 旧环境）"| FB["主线程 fallback<br/>动态 import marked"]
+  HASW -->|是| POOL["Worker 池 round-robin"]
+  POOL --> COAL{"coalesce: 同 id 在飞?"}
+  COAL -->|是| CANC["取消旧请求<br/>reject AbortError"]
+  COAL --> WK["Worker 无状态解析<br/>marked → html + meta，回显 seq"]
+  CANC --> WK
+  WK --> RES["result: html + meta"]
+  FB --> RES
+```
+
+### 贯穿设计原则
+
+- **引用稳定语义**：所有 getter / snapshot / emit payload 在状态不变时返回 `===` 相等引用，
+  内部写时复制 + 版本号；订阅方可放心用引用相等做 memo 短路（修旧版每帧全量拷贝）。
+- **零开销 dev 校验**：dev 分支统一用 `if (IS_DEV && isDevMode() && ...)` 双层守卫——
+  `IS_DEV` 是编译期常量供死代码消除，`isDevMode()` 供测试运行时切换；生产构建后
+  v2 bundle 实测 0 个 `__DEV__` / `console.*` / `Object.freeze` 残留。
+
 ## 🔨 本地开发
 
 - 运行环境：**Node 18+**，包管理器 **pnpm@8**（仓库为 pnpm workspace）。
@@ -172,6 +293,16 @@ pnpm --filter @ms-chat/core typecheck      # tsc 校验 src + tests
 ```
 
 - 体验组件：进入 `packages/react` 或 `packages/vue-next`，查看 `demo/` 目录运行示例。
+- 运行 **v2 验证 demo**（自包含，演示引用稳定订阅 + 流式批处理）：
+
+```bash
+# React v2 demo
+pnpm --filter @ms-chat/react exec vite demo/v2 --config vite.dev.config.ts --port 5191
+# Vue v2 demo
+pnpm --filter @ms-chat/vue-next exec vite demo/v2 --config vite.config.ts --port 5192
+```
+
+> CI：每次 push / PR 自动跑 `@ms-chat/core` 的 typecheck（strict）+ test（覆盖率门槛）+ build，见 [.github/workflows/ci.yml](.github/workflows/ci.yml)。
 
 ![Alt text](image.png)
 
@@ -188,7 +319,9 @@ pnpm --filter @ms-chat/core typecheck      # tsc 校验 src + tests
 | P1 | 健壮性：EventEmitter / SSEClient / PluginSystem + devMode | ✅ |
 | P2 | 扩展性：引用稳定 Store 层 / ChatStore / ComponentRegistry / Manager | ✅ |
 | P3 | 性能：Scheduler 批处理 / ThemeManager v2 / MarkdownWorker（Web Worker 解析） | ✅ |
-| P4 | GA & 工程化：CI / 共享构建配置 | 规划中 |
+| P4 | GA & 工程化：GitHub Actions CI / v2 覆盖率门槛 / React + Vue v2 demo | ✅ |
+
+> 全程 167 单测、tsc strict 通过、CI 绿；PROD v2 bundle 0 个 `__DEV__` / `console.*` / `Object.freeze` 残留。
 
 ## 😄 开发群
 
