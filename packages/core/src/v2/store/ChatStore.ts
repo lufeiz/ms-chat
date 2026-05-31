@@ -35,10 +35,12 @@ export class ChatStore<TComp = unknown> {
     this.config = new ConfigStore(options.config ?? {});
   }
 
-  /** 释放所有子 store 的监听与注册表。 */
+  /** 释放所有子 store 的监听、挂起的批处理任务与注册表。 */
   destroy(): void {
-    this.messages.removeAllListeners();
-    this.conversations.removeAllListeners();
+    // 列表型 store：destroy 会取消挂起的 changed 调度并移除监听
+    this.messages.destroy();
+    this.conversations.destroy();
+    // 单值 store：直接移除监听
     this.msgInput.removeAllListeners();
     this.config.removeAllListeners();
     this.registry.clear();

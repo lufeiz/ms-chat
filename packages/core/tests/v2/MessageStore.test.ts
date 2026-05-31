@@ -47,7 +47,7 @@ describe('MessageStore', () => {
   });
 
   describe('emit timing', () => {
-    it('add emits message:add and changed', () => {
+    it('add emits message:add (sync) and changed (after flush)', () => {
       const store = new MessageStore();
       const onAdd = vi.fn();
       const onChanged = vi.fn();
@@ -55,7 +55,9 @@ describe('MessageStore', () => {
       store.on('changed', onChanged);
       const msg = text('a');
       store.add(msg);
-      expect(onAdd).toHaveBeenCalledWith(msg);
+      expect(onAdd).toHaveBeenCalledWith(msg); // 细粒度事件同步
+      expect(onChanged).not.toHaveBeenCalled(); // changed 批处理：尚未派发
+      store.flush();
       expect(onChanged).toHaveBeenCalledOnce();
     });
 
@@ -140,6 +142,64 @@ describe('MessageStore', () => {
       const onChanged = vi.fn();
       store.on('changed', onChanged);
       store.addMany([]);
+      expect(onChanged).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('microtask batching (P3-1)', () => {
+    const tick = () => Promise.resolve();
+
+    it('coalesces a sync burst of adds into a single changed (but N message:add)', async () => {
+      const store = new MessageStore();
+      const onAdd = vi.fn();
+      const onChanged = vi.fn();
+      store.on('message:add', onAdd);
+      store.on('changed', onChanged);
+      store.add(text('a'));
+      store.add(text('b'));
+      store.add(text('c'));
+      expect(onAdd).toHaveBeenCalledTimes(3); // 细粒度同步
+      expect(onChanged).not.toHaveBeenCalled(); // 尚未派发
+      await tick();
+      expect(onChanged).toHaveBeenCalledOnce(); // 合并成一次
+    });
+
+    it('getSnapshot is up to date synchronously, before the changed fires', () => {
+      const store = new MessageStore();
+      store.add(text('a'));
+      store.add(text('b'));
+      // 读不延迟：mutate 后立即可见最新
+      expect(store.getSnapshot().data.map((m) => m.id)).toEqual(['a', 'b']);
+    });
+
+    it('flush() makes changed observable immediately', () => {
+      const store = new MessageStore();
+      const onChanged = vi.fn();
+      store.on('changed', onChanged);
+      store.add(text('a'));
+      store.flush();
+      expect(onChanged).toHaveBeenCalledOnce();
+    });
+
+    it('add then remove in one tick → one changed, correct final snapshot', async () => {
+      const store = new MessageStore();
+      const onChanged = vi.fn();
+      store.on('changed', onChanged);
+      store.add(text('a'));
+      store.add(text('b'));
+      store.remove('a');
+      await tick();
+      expect(onChanged).toHaveBeenCalledOnce();
+      expect(store.getSnapshot().data.map((m) => m.id)).toEqual(['b']);
+    });
+
+    it('destroy() cancels the pending changed and stops further emits', async () => {
+      const store = new MessageStore();
+      const onChanged = vi.fn();
+      store.on('changed', onChanged);
+      store.add(text('a')); // 排了一个 changed
+      store.destroy(); // 取消挂起 + 移除监听
+      await tick();
       expect(onChanged).not.toHaveBeenCalled();
     });
   });
