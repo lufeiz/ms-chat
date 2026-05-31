@@ -52,6 +52,26 @@ describe('ConversationStore', () => {
     expect(store.getCurrent()?.name).toBe('renamed');
   });
 
+  it('init notifies conversation:current subscribers when it clears a selection', () => {
+    const store = new ConversationStore();
+    store.add(conv('a'));
+    store.setCurrent('a');
+    const onCurrent = vi.fn();
+    store.on('conversation:current', onCurrent);
+    store.init([conv('b')]);
+    expect(store.getCurrent()).toBeNull();
+    expect(onCurrent).toHaveBeenCalledWith(null);
+  });
+
+  it('init does not emit conversation:current when there was no selection', () => {
+    const store = new ConversationStore();
+    store.add(conv('a'));
+    const onCurrent = vi.fn();
+    store.on('conversation:current', onCurrent);
+    store.init([conv('b')]); // current 本就为 null，不应多余 emit
+    expect(onCurrent).not.toHaveBeenCalled();
+  });
+
   it('getByStatus filters', () => {
     const store = new ConversationStore();
     store.add(conv('a', 1));
