@@ -8,19 +8,25 @@
         <slot name="sender-header" />
       </div>
       <textarea class="sender-textarea" :disabled="disabled" :value="query" :placeholder="placeholder"
+        :aria-label="placeholder || '消息输入框'"
         :maxlength="maxlength" @input="handleInputChange" @keyup="handleKeyUp" @keydown="handleKeyDown" @focus="onfocus"
         autoSize />
       <div class="sender-pop" v-if="!hidden">
-        <n-icon size="24" :depth="3" @click="openUpload">
+        <n-icon size="24" :depth="3" role="button" tabindex="0" aria-label="上传文件"
+          @click="openUpload" @keydown.enter.prevent="openUpload" @keydown.space.prevent="openUpload">
           <Attach />
         </n-icon>
         <n-popover trigger="hover" placement="top-start">
           <template #trigger>
             <div v-if="!pending" class="sender-pop-trigger"
-              :class="(query.length && !pending) ? 'sender-pop-trigger2' : ''" @click="handleSendMessage">
+              :class="(query.length && !pending) ? 'sender-pop-trigger2' : ''"
+              role="button" tabindex="0" aria-label="发送" :aria-disabled="!query.length || disabled"
+              @click="handleSendMessage" @keydown.enter.prevent="handleSendMessage" @keydown.space.prevent="handleSendMessage">
             </div>
             <div v-else class="sendBtnPending-wrap">
-              <div class="sendBtnPending cursor-pointer rounded-md" @click="handleStopSend"></div>
+              <div class="sendBtnPending cursor-pointer rounded-md"
+                role="button" tabindex="0" aria-label="停止"
+                @click="handleStopSend" @keydown.enter.prevent="handleStopSend" @keydown.space.prevent="handleStopSend"></div>
               <div class="sendBtnPending-bg"></div>
             </div>
           </template>
