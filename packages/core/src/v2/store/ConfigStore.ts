@@ -1,4 +1,4 @@
-import { EventEmitter } from '../core/EventEmitter';
+import { EventEmitter, type EmitterOptions } from '../core/EventEmitter';
 import type { ChatConfig } from '../../model';
 
 export type ConfigStoreEvents = {
@@ -13,8 +13,8 @@ export type ConfigStoreEvents = {
 export class ConfigStore extends EventEmitter<ConfigStoreEvents> {
   private config: ChatConfig;
 
-  constructor(initial: ChatConfig = {}) {
-    super();
+  constructor(initial: ChatConfig = {}, options: EmitterOptions = {}) {
+    super(options);
     this.config = initial;
   }
 
