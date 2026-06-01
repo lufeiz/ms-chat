@@ -1,4 +1,4 @@
-import { EventEmitter } from '../core/EventEmitter';
+import { EventEmitter, type EmitterOptions } from '../core/EventEmitter';
 import { isDevMode } from '../core/devMode';
 import { IS_DEV } from '../core/env';
 import { Scheduler } from '../core/Scheduler';
@@ -13,6 +13,14 @@ export interface Snapshot<T> {
 export type ListStoreEvents<T> = {
   changed: [snapshot: Snapshot<T>];
 };
+
+export interface BaseListStoreOptions extends EmitterOptions {
+  /**
+   * 列表最大长度。超过时从头部裁剪最旧的元素（环形/滑窗），防止长会话无界增长。
+   * 默认 0 = 不限制。
+   */
+  maxSize?: number;
+}
 
 /**
  * 列表型 store 基类（RFC §2.0 引用稳定语义 / §2.1.3）。
@@ -34,6 +42,12 @@ export abstract class BaseListStore<
   private _version = 0;
   private cachedSnapshot: Snapshot<T> | null = null;
   private scheduler = new Scheduler();
+  private readonly maxSize: number;
+
+  constructor(options: BaseListStoreOptions = {}) {
+    super(options); // 转发 onError/stopOnError/maxListeners 给 EventEmitter（统一错误通道）
+    this.maxSize = Math.max(0, options.maxSize ?? 0);
+  }
 
   /**
    * `changed` 的实际派发函数。用稳定引用（class field）使 Scheduler 能按 fn 去重：
@@ -66,7 +80,11 @@ export abstract class BaseListStore<
     // 始终复制：调用方可能传入外部数组（如 init/reset 传入业务侧的列表），
     // 若直接持有其引用，调用方之后对该数组的 mutation 会绕过 version/changed
     // 改变 getSnapshot().data，破坏引用稳定契约。复制成本相对渲染可忽略。
-    const copy = next.slice();
+    // 同时按 maxSize 从头部裁剪，避免长会话无界增长（slice 已顺带复制）。
+    const copy =
+      this.maxSize > 0 && next.length > this.maxSize
+        ? next.slice(next.length - this.maxSize)
+        : next.slice();
     this.list = IS_DEV && isDevMode() ? (Object.freeze(copy) as ReadonlyArray<T>) : copy;
     this._version += 1;
     this.cachedSnapshot = null;

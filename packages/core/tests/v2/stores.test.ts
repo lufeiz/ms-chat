@@ -149,4 +149,39 @@ describe('ChatStore', () => {
     expect(onChanged).not.toHaveBeenCalled();
     expect(store.registry.size).toBe(0);
   });
+
+  it('routes a throwing listener through the unified onError channel (S2)', () => {
+    const onError = vi.fn();
+    const store = new ChatStore<string>({ onError });
+    // 订阅者抛错：不应中断派发，且必须经统一 onError 透出（非 PROD 静默）
+    store.messages.on('message:add', () => {
+      throw new Error('listener boom');
+    });
+    const after = vi.fn();
+    store.messages.on('message:add', after);
+    store.messages.add({ id: 'm1', type: 'text', content: 'hi' });
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(after).toHaveBeenCalledTimes(1); // 错误隔离仍生效
+  });
+
+  it('forwards onError to every sub-store (S2)', () => {
+    const onError = vi.fn();
+    const store = new ChatStore({ onError });
+    store.conversations.on('conversation:add', () => {
+      throw new Error('conv boom');
+    });
+    store.conversations.add({ conversationId: 'c1', name: 'c1', status: 0 });
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('enforces maxMessages from ChatStore options (S2)', () => {
+    const store = new ChatStore({ maxMessages: 2 });
+    store.messages.add({ id: 'a', type: 'text', content: '1' });
+    store.messages.add({ id: 'b', type: 'text', content: '2' });
+    store.messages.add({ id: 'c', type: 'text', content: '3' });
+    expect(store.messages.getSnapshot().data.map((m) => m.id)).toEqual([
+      'b',
+      'c',
+    ]);
+  });
 });
