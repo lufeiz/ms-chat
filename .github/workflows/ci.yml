@@ -64,6 +64,9 @@ jobs:
       - name: Build @ms-chat/core (adapters depend on its dist)
         run: pnpm --filter @ms-chat/core build
 
+      - name: Test @ms-chat/react (component + a11y + XSS regression)
+        run: pnpm --filter @ms-chat/react test
+
       - name: Build @ms-chat/react
         run: pnpm --filter @ms-chat/react build
 
