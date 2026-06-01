@@ -214,4 +214,63 @@ describe('MessageStore', () => {
       expect(() => data.push(text('b'))).toThrow();
     });
   });
+
+  describe('bounded growth (S2 maxSize)', () => {
+    it('trims oldest items from the head when exceeding maxSize', () => {
+      const store = new MessageStore({ maxSize: 3 });
+      store.add(text('a'));
+      store.add(text('b'));
+      store.add(text('c'));
+      store.add(text('d')); // 超界 → 'a' 被裁剪
+      expect(store.getSnapshot().data.map((m) => m.id)).toEqual([
+        'b',
+        'c',
+        'd',
+      ]);
+    });
+
+    it('addMany respects maxSize', () => {
+      const store = new MessageStore({ maxSize: 2 });
+      store.addMany([text('a'), text('b'), text('c')]);
+      expect(store.getSnapshot().data.map((m) => m.id)).toEqual(['b', 'c']);
+    });
+
+    it('maxSize unset (default) keeps everything', () => {
+      const store = new MessageStore();
+      for (let i = 0; i < 50; i++) store.add(text(`m${i}`));
+      expect(store.getSnapshot().data).toHaveLength(50);
+    });
+  });
+
+  describe('streaming update fast path (S2)', () => {
+    it('updates the last message correctly (hot path)', () => {
+      const store = new MessageStore();
+      store.add(text('u1', 'user'));
+      store.add(text('a1', ''));
+      store.update('a1', { content: 'streaming…' } as Partial<Message>);
+      expect((store.get('a1') as TextMessage).content).toBe('streaming…');
+      expect((store.get('u1') as TextMessage).content).toBe('user');
+    });
+
+    it('still updates a non-last message via fallback findIndex', () => {
+      const store = new MessageStore();
+      store.add(text('a', 'old'));
+      store.add(text('b', 'keep'));
+      expect(store.update('a', { content: 'new' } as Partial<Message>)).toBe(
+        true,
+      );
+      expect((store.get('a') as TextMessage).content).toBe('new');
+      expect((store.get('b') as TextMessage).content).toBe('keep');
+    });
+
+    it('keeps immutability: new array + element ref per update', () => {
+      const store = new MessageStore();
+      store.add(text('a', 'x'));
+      const before = store.getSnapshot();
+      store.update('a', { content: 'y' } as Partial<Message>);
+      const after = store.getSnapshot();
+      expect(after.data).not.toBe(before.data);
+      expect(after.data[0]).not.toBe(before.data[0]);
+    });
+  });
 });

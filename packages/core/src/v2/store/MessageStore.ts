@@ -29,7 +29,13 @@ export class MessageStore extends BaseListStore<Message, MessageStoreEvents> {
   }
 
   update(id: string, updates: Partial<Message>): boolean {
-    const idx = this.list.findIndex((m) => m.id === id);
+    // 流式热路径优化：流式输出几乎总是更新最后一条消息，先查尾部，
+    // 命中则免去整表 findIndex（高频 token 更新下从 O(n) 降到 O(1) 定位）。
+    const lastIdx = this.list.length - 1;
+    const idx =
+      lastIdx >= 0 && this.list[lastIdx].id === id
+        ? lastIdx
+        : this.list.findIndex((m) => m.id === id);
     if (idx === -1) return false;
     const next = this.list.slice();
     next[idx] = { ...next[idx], ...updates } as Message;

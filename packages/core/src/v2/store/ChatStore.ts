@@ -7,6 +7,15 @@ import { MsgInputStore } from './MsgInputStore';
 
 export interface ChatStoreOptions {
   config?: ChatConfig;
+  /** 消息列表上限（超过从头部裁剪），防止长会话无界增长。默认不限制。 */
+  maxMessages?: number;
+  /** 会话列表上限。默认不限制。 */
+  maxConversations?: number;
+  /**
+   * 统一错误通道：任一子 store 的监听器抛错都会经此回调（修「PROD 静默失败」）。
+   * 不传则沿用 EventEmitter 默认（DEV 下 console.error，PROD 静默）。
+   */
+  onError?: (err: unknown, eventName: string) => void;
 }
 
 /**
@@ -24,15 +33,23 @@ export interface ChatStoreOptions {
  * ```
  */
 export class ChatStore<TComp = unknown> {
-  readonly messages = new MessageStore();
-  readonly conversations = new ConversationStore();
-  readonly msgInput = new MsgInputStore();
+  readonly messages: MessageStore;
+  readonly conversations: ConversationStore;
+  readonly msgInput: MsgInputStore;
   readonly config: ConfigStore;
   /** 实例级消息组件注册表，替代 v1 全局 registryMessageType（修 E1）。 */
   readonly registry = new ComponentRegistry<TComp>();
 
   constructor(options: ChatStoreOptions = {}) {
-    this.config = new ConfigStore(options.config ?? {});
+    const { onError } = options;
+    // 统一错误通道：onError 透传到所有子 store，避免 PROD 下监听器异常静默丢失。
+    this.messages = new MessageStore({ maxSize: options.maxMessages, onError });
+    this.conversations = new ConversationStore({
+      maxSize: options.maxConversations,
+      onError,
+    });
+    this.msgInput = new MsgInputStore({ onError });
+    this.config = new ConfigStore(options.config ?? {}, { onError });
   }
 
   /** 释放所有子 store 的监听、挂起的批处理任务与注册表。 */
