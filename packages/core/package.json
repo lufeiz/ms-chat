@@ -2,9 +2,9 @@
   "name": "@ms-chat/core",
   "version": "0.0.2-beta.4",
   "publishConfig": {
-    "module": "dist/ms-chat-core.es.ts",
-    "main": "dist/ms-chat-core.js",
-    "types": "dist/ms-chat-core.d.ts"
+    "module": "dist/ms-chat-core.es.js",
+    "main": "dist/ms-chat-core.cjs.js",
+    "types": "dist/index.d.ts"
   },
   "exports": {
     ".": {
@@ -40,12 +40,10 @@
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
-    "d3-array": "3.2.4",
     "lodash-es": "^4.17.21",
     "marked": "^18.0.4"
   },
   "devDependencies": {
-    "@types/d3-array": "^3.2.1",
     "@vitest/coverage-v8": "^4.1.7",
     "@vitest/web-worker": "^4.1.7",
     "jsdom": "^29.1.1",
