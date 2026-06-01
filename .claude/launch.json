@@ -14,6 +14,13 @@
       "runtimeArgs": ["vite", "demo/v2", "--config", "vite.config.ts", "--port", "5192"],
       "cwd": "packages/vue-next",
       "port": 5192
+    },
+    {
+      "name": "react-main-demo",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "--config", "vite.dev.config.ts", "--port", "5193"],
+      "cwd": "packages/react",
+      "port": 5193
     }
   ]
 }

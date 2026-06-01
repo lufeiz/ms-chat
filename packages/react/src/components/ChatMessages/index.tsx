@@ -15,7 +15,13 @@ const ChatMessages: React.FC<IChatMessagesProps> = ({
 
   return (
     <ChatListContext.Provider value={store}>
-      <div className="chat-message-list">
+      {/* role=log + aria-live=polite：流式助手回复会被读屏增量播报（无障碍） */}
+      <div
+        className="chat-message-list"
+        role="log"
+        aria-live="polite"
+        aria-label="对话消息列表"
+      >
         <List {...scopeSlots} />
         <Empty />
       </div>
