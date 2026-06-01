@@ -135,6 +135,30 @@ describe('SSEClient', () => {
       await client.connect({ url: URL }, { onMessage: onMessage2 });
       expect(onMessage2).toHaveBeenCalledOnce();
     });
+
+    it('aborts a still-active connection when connect() is called again (S2 — no leak)', async () => {
+      const signals: AbortSignal[] = [];
+      // 第一个连接保持打开（不关闭流），记录每次 fetch 收到的 signal
+      mockFetch.mockImplementation((_url: string, init: RequestInit) => {
+        signals.push(init.signal as AbortSignal);
+        return openSseResponse('{"v":1}');
+      });
+      const client = new SSEClient<{ v: number }>();
+
+      // fire-and-forget：长连接不会自行 settle，这里只验证 abort 信号语义
+      void client.connect({ url: URL }, { onMessage: vi.fn() });
+      await sleep(10); // 让第一次连接进入活跃态
+      expect(signals[0].aborted).toBe(false);
+
+      // 未 disconnect 直接再次 connect：旧连接应被中断（否则泄漏）
+      void client.connect({ url: URL }, { onMessage: vi.fn() });
+      await sleep(10);
+      expect(signals[0].aborted).toBe(true); // 旧 signal 已被 abort
+      expect(signals[1].aborted).toBe(false); // 新连接仍活跃
+
+      client.disconnect(); // 收尾：中断第二个连接，避免悬挂
+      expect(signals[1].aborted).toBe(true);
+    });
   });
 
   describe('disconnect', () => {
