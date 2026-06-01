@@ -76,8 +76,14 @@ export class SSEClient<T = unknown> {
     options: SSEClientOptions,
     handlers: SSEHandlers<T>,
   ): Promise<void> {
+    // 并发 connect 防护：若已有活跃连接，先中断旧的；否则旧 controller 被覆盖、
+    // 旧 SSE 连接无法再 disconnect（泄漏，继续吃流量 / 触发旧 handler）。
+    if (this.active) {
+      this.abortController.abort();
+    }
     // 每次连接新建 controller，使实例可复用（修 H1）。
-    this.abortController = new AbortController();
+    const controller = new AbortController();
+    this.abortController = controller;
     this.active = true;
 
     const method = options.method ?? 'POST';
@@ -137,8 +143,8 @@ export class SSEClient<T = unknown> {
         },
 
         onerror: (err: unknown) => {
-          // 手动 disconnect：底层 abort 监听会 resolve，这里不再处理。
-          if (this.abortController.signal.aborted) {
+          // 手动 disconnect / 被并发 connect 抢占：本连接自己的 signal 已 abort，不再重连。
+          if (controller.signal.aborted) {
             throw err;
           }
           retryCount += 1;
@@ -154,14 +160,18 @@ export class SSEClient<T = unknown> {
       // abort（手动 disconnect）静默 settle；其余（重连耗尽 / 致命）已在 onerror 调过
       // onError，这里 rethrow 让 connect() reject。
       if (
-        this.abortController.signal.aborted ||
+        controller.signal.aborted ||
         (err as Error)?.name === 'AbortError'
       ) {
         return;
       }
       throw err;
     } finally {
-      this.active = false;
+      // 仅当本次连接仍是当前连接时才重置 active：避免被并发 connect() 抢占后，
+      // 旧连接的 finally 误清掉新连接的活跃状态（否则后续 disconnect 失效 → 泄漏）。
+      if (this.abortController === controller) {
+        this.active = false;
+      }
     }
   }
 }
