@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [release-2.0.0, release-1.0.0, main]
+    branches: [release-3.0.0, release-2.0.0, release-1.0.0, main]
   pull_request:
 
 # 同一分支/PR 的新提交取消上一次仍在跑的 CI
@@ -39,3 +39,33 @@ jobs:
 
       - name: Build (verify lib + worker chunk emit)
         run: pnpm --filter @ms-chat/core build
+
+  adapters:
+    name: 'react + vue · build (ship check)'
+    runs-on: ubuntu-latest
+    # 适配包依赖 core 的 dist，故先构建 core 再构建各适配包
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @ms-chat/core (adapters depend on its dist)
+        run: pnpm --filter @ms-chat/core build
+
+      - name: Build @ms-chat/react
+        run: pnpm --filter @ms-chat/react build
+
+      - name: Build @ms-chat/vue
+        run: pnpm --filter @ms-chat/vue build

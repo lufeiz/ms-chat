@@ -2,6 +2,24 @@
   "name": "@ms-chat/vue",
   "version": "0.1.0-beta.1",
   "type": "module",
+  "main": "./dist/ms-chat.umd.js",
+  "module": "./dist/ms-chat.es.js",
+  "exports": {
+    ".": {
+      "import": "./dist/ms-chat.es.js",
+      "require": "./dist/ms-chat.umd.js"
+    },
+    "./style.css": "./dist/style.css",
+    "./dist/style.css": "./dist/style.css"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "**/*.css",
+    "**/*.less"
+  ],
   "scripts": {
     "dev": "vite",
     "build-prod": "vue-tsc -b && vite build",
